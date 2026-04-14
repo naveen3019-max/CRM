@@ -188,6 +188,51 @@ Default URLs:
 - Backend: [http://localhost:5000](http://localhost:5000)
 - Frontend: [http://localhost:5173](http://localhost:5173)
 
+## Deploy Backend on Render
+
+This repository now includes [render.yaml](render.yaml) for backend deployment.
+
+### Option A: Blueprint Deploy (recommended)
+
+1. Push this repository to GitHub.
+2. In Render, choose New > Blueprint.
+3. Select this repo and confirm [render.yaml](render.yaml).
+4. Set environment values in Render: CLIENT_URL, JWT_SECRET, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD.
+5. Deploy service.
+6. Run one manual shell command in Render service shell:
+
+```bash
+npm run db:setup
+```
+
+Backend health endpoint after deploy:
+
+- [https://your-render-service.onrender.com/health](https://your-render-service.onrender.com/health)
+
+### Render CORS tip
+
+- CLIENT_URL supports comma-separated origins.
+- Wildcards are supported, for example: [https://*.vercel.app](https://*.vercel.app)
+
+## Deploy Frontend on Vercel
+
+This repository now includes [frontend/vercel.json](frontend/vercel.json) for SPA route rewrites.
+
+1. In Vercel, import this GitHub repository.
+2. Set Root Directory to [frontend](frontend).
+3. Framework preset: Vite.
+4. Build command: npm run build.
+5. Output directory: dist.
+6. Add environment variable VITE_API_URL = [https://your-render-service.onrender.com/api](https://your-render-service.onrender.com/api).
+7. Deploy.
+
+If you use Vercel preview deployments, include preview origin support in Render CLIENT_URL.
+
+## Upload Storage Note
+
+Chat images are stored on backend disk under uploads/. On Render free instances, local disk is ephemeral.
+For production-grade persistence, move uploads to object storage (for example S3-compatible storage) before go-live.
+
 ## Seed Accounts
 
 Password for seed users: ChangeMe@123

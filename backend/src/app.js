@@ -8,12 +8,21 @@ import path from "path";
 import { env } from "./config/env.js";
 import { errorMiddleware, notFoundMiddleware } from "./middleware/error.middleware.js";
 import { apiRouter } from "./routes/index.js";
+import { createCorsOriginChecker } from "./utils/cors.js";
 
 const app = express();
+const isAllowedOrigin = createCorsOriginChecker(env.clientUrls);
 
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin(origin, callback) {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS blocked origin: ${origin || "unknown"}`));
+    },
     credentials: true
   })
 );
