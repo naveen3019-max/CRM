@@ -1,0 +1,48 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply m-0 min-h-screen bg-mesh font-body text-slate-700 antialiased;
+}
+
+.glass-panel {
+  @apply rounded-2xl border border-white/60 bg-white/65 backdrop-blur-xl shadow-glass;
+}
+
+.metric-card {
+  @apply glass-panel p-4 sm:p-5 transition duration-300 hover:-translate-y-1 hover:shadow-soft;
+}
+
+.sidebar-link {
+  @apply flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 transition;
+}
+
+.sidebar-link-active {
+  @apply bg-brand-600 text-white shadow-soft;
+}
+
+.sidebar-link-idle {
+  @apply hover:bg-white/80 hover:text-brand-700;
+}
+
+.fade-up {
+  animation: fadeUp 0.45s ease-out;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
