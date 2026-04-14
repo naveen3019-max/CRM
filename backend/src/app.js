@@ -13,6 +13,8 @@ import { createCorsOriginChecker } from "./utils/cors.js";
 const app = express();
 const isAllowedOrigin = createCorsOriginChecker(env.clientUrls);
 
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin(origin, callback) {
@@ -21,7 +23,7 @@ app.use(
         return;
       }
 
-      callback(new Error(`CORS blocked origin: ${origin || "unknown"}`));
+      callback(null, false);
     },
     credentials: true
   })

@@ -9,7 +9,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const clientUrlSetting = process.env.CLIENT_URL || "http://localhost:5173";
 const clientUrls = clientUrlSetting
-  .split(",")
+  .split(/[\n,]/)
   .map((origin) => origin.trim())
   .filter(Boolean);
 

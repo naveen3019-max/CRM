@@ -15,8 +15,16 @@ function normalizeOrigin(origin) {
   }
 }
 
+function stripWrappingQuotes(value) {
+  return value.replace(/^['"]+|['"]+$/g, "");
+}
+
+function sanitizeOriginLikeValue(value) {
+  return stripWrappingQuotes(value.trim()).replace(/\/+$/, "");
+}
+
 function compileAllowedOrigin(entry) {
-  const trimmed = entry.trim();
+  const trimmed = sanitizeOriginLikeValue(entry);
 
   if (trimmed.includes("*")) {
     return {
@@ -39,7 +47,7 @@ export function createCorsOriginChecker(allowedOrigins) {
       return true;
     }
 
-    const normalizedOrigin = normalizeOrigin(origin);
+    const normalizedOrigin = normalizeOrigin(sanitizeOriginLikeValue(origin));
 
     return compiled.some((rule) => {
       if (rule.type === "wildcard") {
