@@ -1,4 +1,7 @@
 {
+  "env": {
+    "VITE_API_URL": "https://crm-i71p.onrender.com/api"
+  },
   "rewrites": [
     {
       "source": "/(.*)",
