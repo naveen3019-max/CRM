@@ -1,11 +1,11 @@
 import { io } from "socket.io-client";
+import { API_ORIGIN } from "./runtimeConfig.js";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 let socket;
 let activeToken = "";
 
 function resolveSocketServerUrl() {
-  return API_BASE_URL.replace(/\/api\/?$/, "");
+  return API_ORIGIN;
 }
 
 export function connectSocket(token) {

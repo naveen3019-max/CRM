@@ -1,17 +1,17 @@
 import { ImagePlus, SendHorizonal, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
+import { API_ORIGIN } from "../services/runtimeConfig.js";
 
 function resolveMessageImageUrl(rawUrl) {
   if (!rawUrl) {
     return "";
   }
 
-  if (/^https?:\/\//i.test(rawUrl)) {
+  const normalizedRawUrl = String(rawUrl).trim().replace(/\\/g, "/");
+
+  if (/^https?:\/\//i.test(normalizedRawUrl)) {
     try {
-      const parsed = new URL(rawUrl);
+      const parsed = new URL(normalizedRawUrl);
       const host = window.location.hostname;
       const isLocalHostUrl = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
       const isLocalHostPage = host === "localhost" || host === "127.0.0.1";
@@ -22,15 +22,15 @@ function resolveMessageImageUrl(rawUrl) {
 
       return parsed.toString();
     } catch {
-      return rawUrl;
+      return normalizedRawUrl;
     }
   }
 
-  if (rawUrl.startsWith("/")) {
-    return `${API_ORIGIN}${rawUrl}`;
+  if (normalizedRawUrl.startsWith("/")) {
+    return `${API_ORIGIN}${normalizedRawUrl}`;
   }
 
-  return `${API_ORIGIN}/${rawUrl.replace(/^\/+/, "")}`;
+  return `${API_ORIGIN}/${normalizedRawUrl.replace(/^\/+/, "")}`;
 }
 
 export function ChatPanel({
