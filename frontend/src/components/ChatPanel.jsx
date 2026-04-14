@@ -136,42 +136,50 @@ export function ChatPanel({
             <p className="rounded-xl bg-white/80 px-4 py-3 text-center text-sm text-slate-500">{emptyMessage}</p>
           </div>
         ) : null}
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`rounded-2xl text-sm shadow-soft ${
-              message.imageDataUrl || message.imageUrl
-                ? `max-w-[82%] p-1 sm:max-w-[360px] ${message.isMine ? "ml-auto bg-brand-600/20" : "bg-white"}`
-                : `max-w-[88%] px-4 py-2 sm:max-w-[85%] ${message.isMine ? "ml-auto bg-brand-600 text-white" : "bg-white text-slate-700"}`
-            }`}
-          >
-            {message.imageDataUrl || message.imageUrl ? (
-              <button
-                type="button"
-                onClick={() => setPreviewImageUrl(message.imageDataUrl || resolveMessageImageUrl(message.imageUrl))}
-                className="block w-full cursor-zoom-in"
-              >
-                <img
-                  src={message.imageDataUrl || resolveMessageImageUrl(message.imageUrl)}
-                  alt="Chat attachment"
-                  className="block max-h-[420px] w-full rounded-xl bg-slate-100 object-contain"
-                />
-              </button>
-            ) : null}
+        {messages.map((message) => {
+          const hasImage = Boolean(message.imageDataUrl || message.imageUrl);
+          const bubbleClass = hasImage
+            ? message.isMine
+              ? "border border-brand-200 bg-brand-600/10"
+              : "border border-slate-200 bg-white"
+            : message.isMine
+              ? "bg-brand-600 text-white"
+              : "border border-slate-200 bg-white text-slate-700";
 
-            {message.messageBody ? (
-              <p className={`px-3 pb-1 pt-2 ${message.isMine ? "text-slate-800" : "text-slate-700"}`}>{message.messageBody}</p>
-            ) : null}
+          return (
+            <div key={message.id} className={`flex ${message.isMine ? "justify-end" : "justify-start"}`}>
+              <article className={`w-fit max-w-[86%] rounded-2xl text-sm shadow-soft sm:max-w-[72%] ${bubbleClass}`}>
+                {hasImage ? (
+                  <button
+                    type="button"
+                    onClick={() => setPreviewImageUrl(message.imageDataUrl || resolveMessageImageUrl(message.imageUrl))}
+                    className="block cursor-zoom-in p-1.5"
+                  >
+                    <img
+                      src={message.imageDataUrl || resolveMessageImageUrl(message.imageUrl)}
+                      alt="Chat attachment"
+                      className="block max-h-[360px] max-w-full rounded-xl bg-slate-100 object-contain"
+                    />
+                  </button>
+                ) : null}
 
-            <p
-              className={`px-3 pb-2 pt-1 text-[10px] ${
-                message.isMine && !(message.imageDataUrl || message.imageUrl) ? "text-brand-100" : "text-slate-400"
-              }`}
-            >
-              {new Date(message.createdAt).toLocaleTimeString()}
-            </p>
-          </div>
-        ))}
+                {message.messageBody ? (
+                  <p
+                    className={`break-words px-3 pb-1 pt-2 ${
+                      hasImage ? "text-slate-700" : message.isMine ? "text-white" : "text-slate-700"
+                    }`}
+                  >
+                    {message.messageBody}
+                  </p>
+                ) : null}
+
+                <p className={`px-3 pb-2 pt-1 text-[10px] ${hasImage ? "text-slate-400" : message.isMine ? "text-brand-100" : "text-slate-400"}`}>
+                  {new Date(message.createdAt).toLocaleTimeString()}
+                </p>
+              </article>
+            </div>
+          );
+        })}
       </div>
 
       <form onSubmit={submit} className="border-t border-white/70 px-3 py-3 sm:px-4">
