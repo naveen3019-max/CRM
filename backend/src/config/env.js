@@ -13,6 +13,22 @@ const clientUrls = clientUrlSetting
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+function parseBoolean(value, fallback = false) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") {
+    return true;
+  }
+  if (normalized === "false") {
+    return false;
+  }
+
+  return fallback;
+}
+
 const uploadDirSetting = process.env.UPLOAD_DIR || "uploads";
 const resolvedUploadDir = path.isAbsolute(uploadDirSetting)
   ? uploadDirSetting
@@ -30,5 +46,7 @@ export const env = {
   dbName: process.env.DB_NAME || "verbena_crm",
   dbUser: process.env.DB_USER || "root",
   dbPassword: process.env.DB_PASSWORD || "",
+  dbSsl: parseBoolean(process.env.DB_SSL, false),
+  dbSslRejectUnauthorized: parseBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, true),
   uploadDir: resolvedUploadDir
 };

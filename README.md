@@ -195,11 +195,13 @@ This repository now includes [render.yaml](render.yaml) for backend deployment.
 ### Option A: Blueprint Deploy (recommended)
 
 1. Push this repository to GitHub.
-2. In Render, choose New > Blueprint.
-3. Select this repo and confirm [render.yaml](render.yaml).
-4. Set environment values in Render: CLIENT_URL, JWT_SECRET, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD.
-5. Deploy service.
-6. Run one manual shell command in Render service shell:
+1. In Render, choose New > Blueprint.
+1. Select this repo and confirm [render.yaml](render.yaml).
+1. Set environment values in Render: CLIENT_URL, JWT_SECRET, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_SSL, DB_SSL_REJECT_UNAUTHORIZED.
+1. Set DB_SSL=true if your MySQL provider requires TLS/SSL.
+1. Set DB_SSL_REJECT_UNAUTHORIZED=false only if your provider explicitly requires it for self-signed certificates.
+1. Deploy service.
+1. Run one manual shell command in Render service shell:
 
 ```bash
 npm run db:setup
@@ -232,6 +234,22 @@ If you use Vercel preview deployments, include preview origin support in Render 
 
 Chat images are stored on backend disk under uploads/. On Render free instances, local disk is ephemeral.
 For production-grade persistence, move uploads to object storage (for example S3-compatible storage) before go-live.
+
+## Run Database in Cloud (MySQL)
+
+1. Create a managed MySQL instance (for example Railway MySQL, Aiven MySQL, or DigitalOcean Managed MySQL).
+2. Create a database named verbena_crm (or use your own name and set DB_NAME).
+3. Create a DB user with privileges to create and alter tables in that database.
+4. Copy connection values to backend environment variables: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD.
+5. If TLS is required by provider, set DB_SSL=true.
+6. Set DB_SSL_REJECT_UNAUTHORIZED=true for trusted certificates; use false only when provider explicitly requires it.
+7. Run schema and seed setup once from Render shell:
+
+```bash
+npm run db:setup
+```
+
+1. Confirm backend health endpoint and test login.
 
 ## Seed Accounts
 

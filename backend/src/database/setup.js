@@ -36,6 +36,11 @@ async function setupDatabase() {
     port: env.dbPort,
     user: env.dbUser,
     password: env.dbPassword,
+    ssl: env.dbSsl
+      ? {
+          rejectUnauthorized: env.dbSslRejectUnauthorized
+        }
+      : undefined,
     waitForConnections: true,
     connectionLimit: 2,
     multipleStatements: true
@@ -43,6 +48,14 @@ async function setupDatabase() {
 
   try {
     await adminPool.query(`CREATE DATABASE IF NOT EXISTS \`${env.dbName}\``);
+  } catch (error) {
+    if (!["ER_DBACCESS_DENIED_ERROR", "ER_ACCESS_DENIED_ERROR"].includes(error.code)) {
+      throw error;
+    }
+
+    console.warn(
+      `Skipping CREATE DATABASE for ${env.dbName} due to insufficient privileges. Ensure the database already exists.`
+    );
   } finally {
     await adminPool.end();
   }
@@ -53,6 +66,11 @@ async function setupDatabase() {
     user: env.dbUser,
     password: env.dbPassword,
     database: env.dbName,
+    ssl: env.dbSsl
+      ? {
+          rejectUnauthorized: env.dbSslRejectUnauthorized
+        }
+      : undefined,
     waitForConnections: true,
     connectionLimit: 2,
     multipleStatements: true
