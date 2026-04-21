@@ -36,6 +36,76 @@ body {
   animation: fadeUp 0.45s ease-out;
 }
 
+.saas-gradient-bg-dark {
+  background: radial-gradient(circle at 18% 22%, rgba(79, 70, 229, 0.35), transparent 40%),
+    radial-gradient(circle at 82% 18%, rgba(34, 211, 238, 0.2), transparent 36%),
+    radial-gradient(circle at 52% 78%, rgba(168, 85, 247, 0.2), transparent 42%),
+    linear-gradient(145deg, #050816 0%, #0b1024 52%, #130f2d 100%);
+  background-size: 170% 170%;
+  animation: gradientShift 18s ease infinite;
+}
+
+.saas-gradient-bg-light {
+  background: radial-gradient(circle at 20% 20%, rgba(79, 70, 229, 0.18), transparent 42%),
+    radial-gradient(circle at 76% 16%, rgba(34, 211, 238, 0.2), transparent 36%),
+    radial-gradient(circle at 62% 76%, rgba(99, 102, 241, 0.16), transparent 40%),
+    linear-gradient(145deg, #ecf3ff 0%, #e6ebff 45%, #f7f7ff 100%);
+  background-size: 170% 170%;
+  animation: gradientShift 20s ease infinite;
+}
+
+.saas-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.saas-orb-cyan {
+  width: 280px;
+  height: 280px;
+  top: -80px;
+  right: -50px;
+  background: rgba(34, 211, 238, 0.45);
+  animation: floatY 10s ease-in-out infinite;
+}
+
+.saas-orb-indigo {
+  width: 380px;
+  height: 380px;
+  left: -120px;
+  bottom: -140px;
+  background: rgba(79, 70, 229, 0.32);
+  animation: floatY 13s ease-in-out infinite;
+}
+
+.saas-orb-purple {
+  width: 260px;
+  height: 260px;
+  right: 35%;
+  bottom: 8%;
+  background: rgba(168, 85, 247, 0.28);
+  animation: floatY 12s ease-in-out infinite;
+}
+
+.saas-particle {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.45);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.45);
+  animation: particleDrift 5.5s ease-in-out infinite;
+}
+
+.saas-glow {
+  color: #22d3ee;
+  text-shadow: 0 0 16px rgba(34, 211, 238, 0.6);
+}
+
+.saas-float {
+  animation: floatY 8s ease-in-out infinite;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -44,5 +114,39 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes floatY {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes particleDrift {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-8px) scale(1.1);
+    opacity: 0.9;
   }
 }
