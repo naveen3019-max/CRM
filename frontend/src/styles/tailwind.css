@@ -113,6 +113,17 @@ body {
     #f8fafc;
 }
 
+.auth-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(to right, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
+  mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
+}
+
 .auth-float-shape {
   animation: floatY 12s ease-in-out infinite;
 }
@@ -132,6 +143,15 @@ body {
   transform: translateX(3px);
   border-color: rgba(37, 99, 235, 0.25);
   background-color: rgba(255, 255, 255, 0.92);
+}
+
+.auth-metric-card {
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.auth-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
 }
 
 .auth-dashboard {
@@ -187,6 +207,14 @@ body {
 
 .auth-submit:hover::before {
   left: 120%;
+}
+
+.auth-avatar-stack span {
+  transition: transform 220ms ease;
+}
+
+.auth-avatar-stack:hover span {
+  transform: translateY(-1px);
 }
 
 @keyframes fadeUp {
