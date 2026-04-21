@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { VerbenaIntroPanel } from "../components/VerbenaIntroPanel.jsx";
 import apiClient from "../services/apiClient";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -31,52 +32,56 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 sm:p-6">
-      <div className="glass-panel w-full max-w-md p-5 sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Verbena Tech</p>
-        <h1 className="mt-3 font-heading text-2xl font-semibold text-slate-800 sm:text-3xl">CRM + Operations Platform</h1>
-        <p className="mt-2 text-sm text-slate-500">Role-based access login</p>
+    <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-6 sm:px-6">
+      <div className="grid w-full gap-4 lg:grid-cols-[1.2fr_0.95fr] lg:gap-6">
+        <VerbenaIntroPanel />
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-          <label className="block text-sm font-semibold text-slate-600">
-            Email
-            <input
-              className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-700 outline-none ring-brand-300 focus:ring"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              type="email"
-              required
-            />
-          </label>
+        <div className="glass-panel w-full p-5 sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Verbena Tech</p>
+          <h1 className="mt-3 font-heading text-2xl font-semibold text-slate-800 sm:text-3xl">CRM + Operations Platform</h1>
+          <p className="mt-2 text-sm text-slate-500">Role-based access login</p>
 
-          <label className="block text-sm font-semibold text-slate-600">
-            Password
-            <input
-              className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-700 outline-none ring-brand-300 focus:ring"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              type="password"
-              required
-            />
-          </label>
+          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+            <label className="block text-sm font-semibold text-slate-600">
+              Email
+              <input
+                className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-700 outline-none ring-brand-300 focus:ring"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                type="email"
+                required
+              />
+            </label>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="h-11 w-full rounded-xl bg-brand-600 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
+            <label className="block text-sm font-semibold text-slate-600">
+              Password
+              <input
+                className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-700 outline-none ring-brand-300 focus:ring"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                type="password"
+                required
+              />
+            </label>
 
-        {error ? <p className="mt-3 text-sm text-red-500">{error}</p> : null}
-        <p className="mt-5 text-sm text-slate-500">
-          Need an account?{" "}
-          <Link to="/register" className="font-semibold text-brand-700 hover:text-brand-800">
-            Register
-          </Link>
-        </p>
-        <p className="mt-5 text-xs text-slate-500">Roles: {roleHint}</p>
+            <button
+              type="submit"
+              disabled={loading}
+              className="h-11 w-full rounded-xl bg-brand-600 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+            >
+              {loading ? "Signing in..." : "Sign in"}
+            </button>
+          </form>
+
+          {error ? <p className="mt-3 text-sm text-red-500">{error}</p> : null}
+          <p className="mt-5 text-sm text-slate-500">
+            Need an account?{" "}
+            <Link to="/register" className="font-semibold text-brand-700 hover:text-brand-800">
+              Register
+            </Link>
+          </p>
+          <p className="mt-5 text-xs text-slate-500">Roles: {roleHint}</p>
+        </div>
       </div>
     </div>
   );
