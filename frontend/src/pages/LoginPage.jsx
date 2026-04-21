@@ -32,11 +32,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-6 sm:px-6">
+    <div className="mx-auto flex min-h-screen w-full max-w-6xl items-start px-4 py-4 sm:px-6 sm:py-6 lg:items-center">
       <div className="grid w-full gap-4 lg:grid-cols-[1.2fr_0.95fr] lg:gap-6">
-        <VerbenaIntroPanel />
+        <div className="order-2 lg:order-1">
+          <VerbenaIntroPanel />
+        </div>
 
-        <div className="glass-panel w-full p-5 sm:p-8">
+        <div className="glass-panel order-1 w-full p-5 sm:p-8 lg:order-2">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Verbena Tech</p>
           <h1 className="mt-3 font-heading text-2xl font-semibold text-slate-800 sm:text-3xl">CRM + Operations Platform</h1>
           <p className="mt-2 text-sm text-slate-500">Role-based access login</p>

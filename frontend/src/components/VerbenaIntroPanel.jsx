@@ -27,7 +27,26 @@ export function VerbenaIntroPanel({ compact = false }) {
         excellence, and workforce readiness.
       </p>
 
-      <div className="mt-5 space-y-3">
+      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-xl border border-slate-200 bg-white/80 px-2 py-2 text-xs font-semibold text-slate-700">AI</div>
+        <div className="rounded-xl border border-slate-200 bg-white/80 px-2 py-2 text-xs font-semibold text-slate-700">AR</div>
+        <div className="rounded-xl border border-slate-200 bg-white/80 px-2 py-2 text-xs font-semibold text-slate-700">VR</div>
+      </div>
+
+      <details className="mt-4 rounded-xl border border-slate-200 bg-white/80 sm:hidden">
+        <summary className="cursor-pointer list-none px-3 py-3 text-sm font-semibold text-slate-700">
+          See core capabilities
+        </summary>
+        <div className="space-y-2 px-3 pb-3">
+          {corePillars.map((item) => (
+            <div key={item} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+              {item}
+            </div>
+          ))}
+        </div>
+      </details>
+
+      <div className="mt-5 hidden space-y-3 sm:block">
         {corePillars.map((item) => (
           <div key={item} className="rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-700">
             {item}
@@ -37,8 +56,8 @@ export function VerbenaIntroPanel({ compact = false }) {
 
       {!compact ? (
         <>
-          <h3 className="mt-6 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Industries We Serve</h3>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <h3 className="mt-6 hidden text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:block">Industries We Serve</h3>
+          <div className="mt-3 hidden flex-wrap gap-2 md:flex">
             {industries.map((name) => (
               <span key={name} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
                 {name}
