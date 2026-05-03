@@ -542,7 +542,10 @@ export default function RoleChatPage({ role }) {
     }
 
     try {
-      const response = await apiClient.get(`/chat/conversations/${conversationId}/messages`, withAuth(token));
+      const response = await apiClient.get(`/chat/conversations/${conversationId}/messages`, {
+        ...withAuth(token),
+        params: { _ts: Date.now() }
+      });
       const mappedMessages = response.data.data.map((message) => ({
         ...message,
         isMine: Number(message.senderId) === Number(user.id)
@@ -552,6 +555,26 @@ export default function RoleChatPage({ role }) {
       // Keep the current thread visible if refresh fails.
     }
   }, [chatUserId, conversationId, token, user.id]);
+
+  const handleMessagePinStateChanged = useCallback(
+    async (messageId, pinned) => {
+      setMessages((previous) =>
+        previous.map((message) =>
+          String(message.id) === String(messageId)
+            ? {
+                ...message,
+                pinned: pinned ? 1 : 0,
+                pinnedAt: pinned ? new Date().toISOString() : null
+              }
+            : message
+        )
+      );
+
+      setPinnedRefreshKey((previous) => previous + 1);
+      await refreshConversationMessages();
+    },
+    [refreshConversationMessages]
+  );
 
   const roleTabs = scopeOptions.map((scopeOption) => ({
     label: scopeOption.label,
@@ -654,6 +677,7 @@ export default function RoleChatPage({ role }) {
           typingLabel={typingLabel}
           conversationId={conversationId}
           pinnedRefreshKey={pinnedRefreshKey}
+          onMessagePinStateChanged={handleMessagePinStateChanged}
           onTypingChange={handleTypingChange}
           onOpenGroups={() => setChatMode("groups")}
         />

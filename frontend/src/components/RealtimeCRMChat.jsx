@@ -9,6 +9,7 @@ import {
   Mic,
   Paperclip,
   Plus,
+  Pin,
   Search,
   Send,
   Users,
@@ -28,6 +29,7 @@ import {
   parseRequirementItems,
   summarizeMessage
 } from "./chatMessageUtils.js";
+import apiClient from "../services/apiClient.js";
 import { MessagePinMenu } from "./MessagePinMenu.jsx";
 import { PinnedMessagesPanel } from "./PinnedMessagesPanel.jsx";
 
@@ -43,9 +45,10 @@ function StatusTick({ status }) {
   return <Check className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />;
 }
 
-function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isHighlighted = false }) {
+function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isHighlighted = false, pinnedOverride = null }) {
   const messageType = classifyMessage(message);
   const isMine = Boolean(message.isMine || Number(message.senderId) === Number(currentUserId));
+  const isPinnedMessage = pinnedOverride !== null ? Boolean(pinnedOverride) : Number(message.pinned) === 1;
   const parsedLocation = messageType === "location" ? parseLocationPayload(message.messageBody) : null;
   const [imageUnavailable, setImageUnavailable] = useState(false);
 
@@ -80,9 +83,14 @@ function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isH
             isHighlighted ? "ring-2 ring-blue-300 ring-offset-2 ring-offset-slate-50" : ""
           } ${shellClass}`}
         >
-          {message.pinned ? (
-            <div className={`absolute left-3 top-2 z-10 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${isMine ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"}`}>
-              📌 Pinned
+          {isPinnedMessage ? (
+            <div
+              className={`absolute left-3 top-2 z-10 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold shadow-sm ${
+                isMine ? "border-white/30 bg-white/20 text-white" : "border-blue-200 bg-blue-50 text-blue-700"
+              }`}
+            >
+              <Pin className="h-3 w-3" aria-hidden="true" />
+              <span>Pinned</span>
             </div>
           ) : null}
 
@@ -247,6 +255,7 @@ export function RealtimeCRMChat({
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [pinnedPanelOpen, setPinnedPanelOpen] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
+  const [pinnedStateByMessageId, setPinnedStateByMessageId] = useState({});
   const initializedMobileViewRef = useRef(false);
 
   const bodyRef = useRef(null);
@@ -307,6 +316,7 @@ export function RealtimeCRMChat({
   useEffect(() => {
     if (!conversationId) {
       setPinnedMessages([]);
+      setPinnedStateByMessageId({});
       return;
     }
 
@@ -314,7 +324,9 @@ export function RealtimeCRMChat({
 
     const loadPinnedMessages = async () => {
       try {
-        const response = await apiClient.get(`/chat/pinned/${conversationId}`);
+        const response = await apiClient.get(`/chat/pinned/${conversationId}`, {
+          params: { _ts: Date.now() }
+        });
         if (!isDisposed) {
           setPinnedMessages(response.data.data || []);
         }
@@ -610,7 +622,9 @@ export function RealtimeCRMChat({
     if (!conversationId) return;
 
     try {
-      const response = await apiClient.get(`/chat/pinned/${conversationId}`);
+      const response = await apiClient.get(`/chat/pinned/${conversationId}`, {
+        params: { _ts: Date.now() }
+      });
       setPinnedMessages(response.data.data || []);
     } catch {
       setPinnedMessages([]);
@@ -622,10 +636,25 @@ export function RealtimeCRMChat({
 
     try {
       await apiClient.post("/chat/pin-message", { messageId: Number(message.id) });
+      const pinnedAt = new Date().toISOString();
+      const pinnedMessage = {
+        ...message,
+        pinned: 1,
+        pinnedAt
+      };
+      setPinnedStateByMessageId((previous) => ({ ...previous, [String(message.id)]: true }));
+      setPinnedMessages((previous) =>
+        previous.some((entry) => String(entry.id) === String(message.id))
+          ? previous.map((entry) => (String(entry.id) === String(message.id) ? pinnedMessage : entry))
+          : [pinnedMessage, ...previous]
+      );
+      await onMessagePinStateChanged?.(message.id, true);
       await refreshPinnedMessages();
-      await onMessagePinStateChanged?.();
     } catch (error) {
-      setAttachmentError(error?.response?.data?.message || "Could not pin message");
+      console.error("pinMessage error:", error);
+      const status = error?.response?.status;
+      const serverMessage = error?.response?.data?.message;
+      setAttachmentError(serverMessage ? `${serverMessage} (${status || "?"})` : `Could not pin message (${status || "?"})`);
     }
   };
 
@@ -634,10 +663,15 @@ export function RealtimeCRMChat({
 
     try {
       await apiClient.post("/chat/unpin-message", { messageId: Number(message.id) });
+      setPinnedStateByMessageId((previous) => ({ ...previous, [String(message.id)]: false }));
+      setPinnedMessages((previous) => previous.filter((entry) => String(entry.id) !== String(message.id)));
+      await onMessagePinStateChanged?.(message.id, false);
       await refreshPinnedMessages();
-      await onMessagePinStateChanged?.();
     } catch (error) {
-      setAttachmentError(error?.response?.data?.message || "Could not unpin message");
+      console.error("unpinMessage error:", error);
+      const status = error?.response?.status;
+      const serverMessage = error?.response?.data?.message;
+      setAttachmentError(serverMessage ? `${serverMessage} (${status || "?"})` : `Could not unpin message (${status || "?"})`);
     }
   };
 
@@ -825,45 +859,24 @@ export function RealtimeCRMChat({
             ) : null}
           </header>
 
-          <div className="grid grid-cols-1 gap-2 border-t border-gray-100 bg-slate-50 px-5 py-2 text-xs text-slate-600 md:grid-cols-3">
-            <div className="flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5 text-slate-400" />
-              <span className="truncate">{infoStrip?.location || "Location not shared"}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-              <span className="truncate">{infoStrip?.schedule || "No schedule"}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <ClipboardList className="h-3.5 w-3.5 text-slate-400" />
-              <span className="truncate">{infoStrip?.requirement || "Requirement pending"}</span>
-            </div>
+          <div className="border-t border-gray-100 bg-slate-50 px-5 py-2 text-xs text-slate-600">
+            <button
+              type="button"
+              onClick={() => setPinnedPanelOpen(true)}
+              className="inline-flex w-full items-center justify-between gap-3 rounded-xl border border-blue-100 bg-white px-3 py-2 text-left shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+            >
+              <span className="inline-flex min-w-0 items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                <Pin className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 truncate font-semibold text-blue-700">View pinned messages</span>
+              </span>
+              <span className="shrink-0 rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white">
+                {pinnedMessages.length}
+              </span>
+            </button>
           </div>
         </div>
-
-        {pinnedMessages.length ? (
-          <div className="border-t border-blue-100 bg-blue-50 px-4 py-2">
-            <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => setPinnedPanelOpen((previous) => !previous)}
-                className="min-w-0 flex-1 text-left"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">📌 Pinned Messages</p>
-                <p className="truncate text-sm text-slate-700">
-                  {pinnedMessages[0]?.messageBody ? summarizeMessage(pinnedMessages[0]) : "Pinned items are ready"}
-                </p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPinnedPanelOpen(true)}
-                className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-600 hover:text-white"
-              >
-                View All
-              </button>
-            </div>
-          </div>
-        ) : null}
 
         <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-4 py-4 sm:px-6">
           {error ? <p className="mb-3 text-sm text-rose-500">{error}</p> : null}
@@ -883,6 +896,7 @@ export function RealtimeCRMChat({
                 currentUserId={currentUserId}
                 onPinMessage={handlePinMessage}
                 onUnpinMessage={handleUnpinMessage}
+                pinnedOverride={pinnedStateByMessageId[String(message.id)]}
                 isHighlighted={String(highlightedMessageId) === String(message.id)}
               />
             </div>

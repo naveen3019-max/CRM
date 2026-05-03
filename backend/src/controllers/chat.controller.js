@@ -55,7 +55,9 @@ export const pinChatMessage = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "messageId is required" });
   }
 
+  console.debug("[pinChatMessage] userId=%s messageId=%s", req.user?.id, messageId);
   const { eventPayload } = await pinMessage(req.user, Number(messageId));
+  console.debug("[pinChatMessage] success eventPayload=%o", eventPayload);
   res.json({ success: true, data: eventPayload });
 });
 
@@ -65,7 +67,9 @@ export const unpinChatMessage = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "messageId is required" });
   }
 
+  console.debug("[unpinChatMessage] userId=%s messageId=%s", req.user?.id, messageId);
   const { eventPayload } = await unpinMessage(req.user, Number(messageId));
+  console.debug("[unpinChatMessage] success eventPayload=%o", eventPayload);
   res.json({ success: true, data: eventPayload });
 });
 

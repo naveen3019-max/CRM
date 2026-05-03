@@ -149,7 +149,7 @@ export async function sendConversationMessage(actor, payload) {
 }
 
 function canPinDirectMessage(actor, message) {
-  return Number(message.senderId) === Number(actor.id) || actor.role === ROLES.ADMIN;
+  return true;
 }
 
 async function canPinGroupMessage(actor, message) {
@@ -157,13 +157,7 @@ async function canPinGroupMessage(actor, message) {
     return false;
   }
 
-  if (Number(message.senderId) === Number(actor.id) || actor.role === ROLES.ADMIN) {
-    return true;
-  }
-
-  const members = await getGroupMembers(Number(message.groupId));
-  const actorMembership = members.find((member) => Number(member.id) === Number(actor.id));
-  return actorMembership?.memberRole === "admin";
+  return true;
 }
 
 export async function pinMessage(actor, messageId) {

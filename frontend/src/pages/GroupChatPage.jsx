@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Loader, AlertCircle, Users, Settings } from "lucide-react";
+import { Send, Loader, AlertCircle, Users, Settings, Pin } from "lucide-react";
 import apiClient from "../services/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { useGroup } from "../context/GroupContext";
@@ -23,6 +23,7 @@ export function GroupChatPage({ groupId }) {
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [pinnedPanelOpen, setPinnedPanelOpen] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
+  const [pinnedStateByMessageId, setPinnedStateByMessageId] = useState({});
   const messagesEndRef = useRef(null);
   const socket = useRef(null);
   const typingTimerRef = useRef(null);
@@ -35,7 +36,9 @@ export function GroupChatPage({ groupId }) {
     if (!groupId || !token) return;
 
     try {
-      const response = await apiClient.get(`/groups/${groupId}/pinned`);
+      const response = await apiClient.get(`/groups/${groupId}/pinned`, {
+        params: { _ts: Date.now() }
+      });
       setPinnedMessages(response.data.data || []);
     } catch {
       setPinnedMessages([]);
@@ -47,6 +50,7 @@ export function GroupChatPage({ groupId }) {
     if (!groupId || !token) return;
 
     setIsLoading(true);
+    setPinnedStateByMessageId({});
 
     const loadGroupInfo = async () => {
       try {
@@ -54,7 +58,9 @@ export function GroupChatPage({ groupId }) {
         const [infoRes, membersRes, messagesRes] = await Promise.all([
           apiClient.get(`/groups/${groupId}`),
           apiClient.get(`/groups/${groupId}/members`),
-          apiClient.get(`/groups/${groupId}/messages?limit=50&offset=0`),
+          apiClient.get(`/groups/${groupId}/messages?limit=50&offset=0`, {
+            params: { _ts: Date.now() }
+          }),
         ]);
 
         setGroupInfo(infoRes.data.data);
@@ -223,12 +229,24 @@ export function GroupChatPage({ groupId }) {
     async (message) => {
       try {
         await apiClient.post("/chat/pin-message", { messageId: Number(message.id) });
+        const pinnedAt = new Date().toISOString();
+        const pinnedMessage = {
+          ...message,
+          pinned: 1,
+          pinnedAt
+        };
+        setPinnedStateByMessageId((previous) => ({ ...previous, [String(message.id)]: true }));
         setMessages((previous) =>
           previous.map((entry) =>
             String(entry.id) === String(message.id)
-              ? { ...entry, pinned: true, pinnedAt: new Date().toISOString() }
+              ? { ...entry, pinned: 1, pinnedAt }
               : entry
           )
+        );
+        setPinnedMessages((previous) =>
+          previous.some((entry) => String(entry.id) === String(message.id))
+            ? previous.map((entry) => (String(entry.id) === String(message.id) ? pinnedMessage : entry))
+            : [pinnedMessage, ...previous]
         );
         await refreshPinnedMessages();
       } catch (err) {
@@ -242,13 +260,15 @@ export function GroupChatPage({ groupId }) {
     async (message) => {
       try {
         await apiClient.post("/chat/unpin-message", { messageId: Number(message.id) });
+        setPinnedStateByMessageId((previous) => ({ ...previous, [String(message.id)]: false }));
         setMessages((previous) =>
           previous.map((entry) =>
             String(entry.id) === String(message.id)
-              ? { ...entry, pinned: false, pinnedAt: null }
+              ? { ...entry, pinned: 0, pinnedAt: null }
               : entry
           )
         );
+        setPinnedMessages((previous) => previous.filter((entry) => String(entry.id) !== String(message.id)));
         await refreshPinnedMessages();
       } catch (err) {
         setError(err.response?.data?.message || "Failed to unpin message");
@@ -347,11 +367,23 @@ export function GroupChatPage({ groupId }) {
                         : "bg-gray-100 text-gray-900"
                     }`}
                   >
-                    {msg.pinned ? (
-                      <div className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${msg.senderId === user?.id ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"}`}>
-                        📌 Pinned
-                      </div>
-                    ) : null}
+                    {(() => {
+                      const isPinnedMessage =
+                        pinnedStateByMessageId[String(msg.id)] !== undefined
+                          ? Boolean(pinnedStateByMessageId[String(msg.id)])
+                          : Number(msg.pinned) === 1;
+
+                      return isPinnedMessage ? (
+                        <div
+                          className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold shadow-sm ${
+                            msg.senderId === user?.id ? "border-white/30 bg-white/20 text-white" : "border-blue-200 bg-blue-50 text-blue-700"
+                          }`}
+                        >
+                          <Pin className="h-3 w-3" aria-hidden="true" />
+                          Pinned
+                        </div>
+                      ) : null;
+                    })()}
 
                     <div className="absolute right-1 top-1 z-10 opacity-100 transition">
                       <MessagePinMenu
