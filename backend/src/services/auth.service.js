@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { ApiError } from "../utils/ApiError.js";
 import { ROLES } from "../utils/constants.js";
 import { signAccessToken } from "../utils/jwt.js";
+import * as companyRepo from "../repositories/company.repository.js";
 import {
   createUser,
   findUserByEmail,
@@ -25,6 +26,14 @@ export async function signupUser(payload) {
     passwordHash,
     role
   });
+
+  if (role === ROLES.VENDOR) {
+    await companyRepo.createCompanyProfile({
+      userId,
+      name: payload.name,
+      email: payload.email
+    });
+  }
 
   const token = signAccessToken({
     id: userId,

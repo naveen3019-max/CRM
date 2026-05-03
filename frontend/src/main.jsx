@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import { UnreadProvider } from "./context/UnreadContext.jsx";
 import App from "./App.jsx";
 import "./styles/tailwind.css";
 
@@ -9,7 +10,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <UnreadProvider>
+          <App />
+        </UnreadProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

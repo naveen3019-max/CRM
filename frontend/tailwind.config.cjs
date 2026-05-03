@@ -27,6 +27,15 @@ module.exports = {
       },
       backgroundImage: {
         mesh: "radial-gradient(circle at 10% 20%, rgba(141, 195, 255, 0.45) 0%, rgba(212, 241, 255, 0.2) 40%, rgba(255, 255, 255, 0) 70%), radial-gradient(circle at 90% 15%, rgba(255, 210, 167, 0.35) 0%, rgba(255, 245, 232, 0.2) 42%, rgba(255, 255, 255, 0) 72%), linear-gradient(130deg, #f7fcff 0%, #f4f8ff 55%, #fff8f2 100%)"
+      },
+      keyframes: {
+        fadeIn: {
+          "0%": { opacity: "0", transform: "translateY(4px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" }
+        }
+      },
+      animation: {
+        fadeIn: "fadeIn 0.3s ease-in-out"
       }
     }
   },

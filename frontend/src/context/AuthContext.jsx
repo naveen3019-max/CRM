@@ -3,11 +3,53 @@ import { createContext, useContext, useMemo, useState } from "react";
 const AuthContext = createContext(null);
 const STORAGE_KEY = "verbena_auth";
 
+function clearStoredAuth() {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Silently fail
+  }
+}
+
+function isJwtExpired(token) {
+  if (!token || typeof token !== "string") {
+    return true;
+  }
+
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return true;
+  }
+
+  try {
+    const payloadJson = window.atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+    const payload = JSON.parse(payloadJson);
+    if (typeof payload.exp !== "number") {
+      return false;
+    }
+
+    return Date.now() >= payload.exp * 1000;
+  } catch {
+    return true;
+  }
+}
+
 function readStoredAuth() {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (isJwtExpired(parsed?.token)) {
+      clearStoredAuth();
+      return null;
+    }
+
+    return parsed;
   } catch {
+    clearStoredAuth();
     return null;
   }
 }
@@ -18,8 +60,21 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(initialState?.user || null);
 
   const login = ({ token: nextToken, user: nextUser }) => {
+    if (isJwtExpired(nextToken)) {
+      clearStoredAuth();
+      setToken("");
+      setUser(null);
+      return;
+    }
+
     setToken(nextToken);
     setUser(nextUser);
+    // Clear stale unread count on login
+    try {
+      window.localStorage.removeItem("verbena_unread_count");
+    } catch {
+      // Silently fail
+    }
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -32,7 +87,13 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setToken("");
     setUser(null);
-    window.localStorage.removeItem(STORAGE_KEY);
+    clearStoredAuth();
+    // Clear unread count on logout
+    try {
+      window.localStorage.removeItem("verbena_unread_count");
+    } catch {
+      // Silently fail
+    }
   };
 
   const updateUser = (nextUser) => {

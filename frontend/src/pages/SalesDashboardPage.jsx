@@ -13,6 +13,10 @@ export default function SalesDashboardPage() {
 
   useEffect(() => {
     async function loadData() {
+      if (!token) {
+        return;
+      }
+
       try {
         const [overviewResponse, leadsResponse] = await Promise.all([
           apiClient.get("/analytics/sales/overview", withAuth(token)),

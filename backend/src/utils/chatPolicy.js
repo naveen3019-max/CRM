@@ -6,7 +6,11 @@ const allowedScopes = {
   [MESSAGE_SCOPE.ADMIN_SALES]: [ROLES.ADMIN, ROLES.SALES],
   [MESSAGE_SCOPE.ADMIN_VENDOR]: [ROLES.ADMIN, ROLES.VENDOR],
   [MESSAGE_SCOPE.ADMIN_ELECTRICIAN]: [ROLES.ADMIN, ROLES.ELECTRICIAN],
-  [MESSAGE_SCOPE.ADMIN_FIELD_WORK]: [ROLES.ADMIN, ROLES.FIELD_WORK]
+  [MESSAGE_SCOPE.ADMIN_FIELD_WORK]: [ROLES.ADMIN, ROLES.FIELD_WORK],
+  [MESSAGE_SCOPE.VENDOR_ELECTRICIAN]: [ROLES.VENDOR, ROLES.ELECTRICIAN],
+  [MESSAGE_SCOPE.VENDOR_FIELD_WORK]: [ROLES.VENDOR, ROLES.FIELD_WORK],
+  [MESSAGE_SCOPE.CUSTOMER_ELECTRICIAN]: [ROLES.CUSTOMER, ROLES.ELECTRICIAN],
+  [MESSAGE_SCOPE.SALES_ELECTRICIAN]: [ROLES.SALES, ROLES.ELECTRICIAN]
 };
 
 export function validateConversationScope(scope, roleA, roleB) {
@@ -34,4 +38,29 @@ export function getCounterpartRoles(scope, actorRole) {
   }
 
   return allowed.filter((role) => role !== actorRole);
+}
+
+export function getAllowedScopesForRole(actorRole) {
+  return Object.entries(allowedScopes)
+    .filter(([, roles]) => roles.includes(actorRole))
+    .map(([scope]) => scope);
+}
+
+export function getAvailableChatRolesForRole(actorRole) {
+  if (actorRole === ROLES.ADMIN) {
+    return Object.values(ROLES).filter((role) => role !== ROLES.ADMIN);
+  }
+
+  const scopes = getAllowedScopesForRole(actorRole);
+  const roles = new Set();
+
+  for (const scope of scopes) {
+    for (const role of getCounterpartRoles(scope, actorRole)) {
+      roles.add(role);
+    }
+  }
+
+  roles.add(ROLES.ADMIN);
+  roles.delete(actorRole);
+  return Array.from(roles);
 }

@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS task_updates (
 
 CREATE TABLE IF NOT EXISTS conversations (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  scope ENUM('sales_customer', 'admin_sales', 'admin_vendor', 'admin_electrician', 'admin_field_work') NOT NULL,
+  scope ENUM('sales_customer','admin_sales','admin_vendor','admin_electrician','admin_field_work','sales_vendor','vendor_electrician','vendor_customer','vendor_field_work','customer_electrician','sales_electrician') NOT NULL,
   participant_low_id BIGINT UNSIGNED NOT NULL,
   participant_high_id BIGINT UNSIGNED NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -124,6 +124,8 @@ CREATE TABLE IF NOT EXISTS messages (
   message_body TEXT NULL,
   image_url VARCHAR(500) NULL,
   is_read TINYINT(1) NOT NULL DEFAULT 0,
+  pinned TINYINT(1) NOT NULL DEFAULT 0,
+  pinned_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_messages_conversation FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
   CONSTRAINT fk_messages_sender FOREIGN KEY (sender_id) REFERENCES users (id),

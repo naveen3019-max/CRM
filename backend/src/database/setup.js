@@ -78,18 +78,37 @@ async function setupDatabase() {
 
   try {
     const migrationFile = path.resolve(__dirname, "migrations/001_init.sql");
+    const onboardingMigrationFile = path.resolve(__dirname, "migrations/002_company_onboarding.sql");
+    const updateFieldsMigrationFile = path.resolve(__dirname, "migrations/003_update_company_fields.sql");
+    const fixPasswordMigrationFile = path.resolve(__dirname, "migrations/004_fix_company_password.sql");
+    const uniqueDocsMigrationFile = path.resolve(__dirname, "migrations/005_unique_docs.sql");
+    const businessCommMigrationFile = path.resolve(__dirname, "migrations/006_business_communication.sql");
+    const groupChatMigrationFile = path.resolve(__dirname, "migrations/007_group_chat.sql");
     const seedFile = path.resolve(__dirname, "seeds/001_seed_users.sql");
 
     await runSqlFile(appPool, migrationFile);
+    await runSqlFile(appPool, onboardingMigrationFile);
+    await safeQuery(appPool, "ALTER TABLE companies ADD COLUMN user_id BIGINT UNSIGNED NULL AFTER id", ["ER_DUP_FIELDNAME"]);
+    // await runSqlFile(appPool, updateFieldsMigrationFile); // Already applied
+    await safeQuery(appPool, "ALTER TABLE companies MODIFY COLUMN password_hash VARCHAR(255) NULL");
+    await safeQuery(appPool, "ALTER TABLE company_documents ADD UNIQUE KEY unique_company_doc (company_id, doc_type)", ["ER_DUP_KEYNAME"]);
+    await runSqlFile(appPool, businessCommMigrationFile);
+    await runSqlFile(appPool, groupChatMigrationFile);
     await appPool.query(
       "ALTER TABLE users MODIFY COLUMN role ENUM('admin','sales','customer','vendor','electrician','field_work') NOT NULL"
     );
     await appPool.query(
-      "ALTER TABLE conversations MODIFY COLUMN scope ENUM('sales_customer','admin_sales','admin_vendor','admin_electrician','admin_field_work') NOT NULL"
+      "ALTER TABLE conversations MODIFY COLUMN scope ENUM('sales_customer','admin_sales','admin_vendor','admin_electrician','admin_field_work','sales_vendor','vendor_electrician','vendor_customer','vendor_field_work','customer_electrician','sales_electrician') NOT NULL"
     );
     await appPool.query("ALTER TABLE tasks MODIFY COLUMN role_type ENUM('vendor','electrician','field_work') NOT NULL");
     await appPool.query("ALTER TABLE messages MODIFY COLUMN message_body TEXT NULL");
     await safeQuery(appPool, "ALTER TABLE messages ADD COLUMN image_url VARCHAR(500) NULL AFTER message_body", [
+      "ER_DUP_FIELDNAME"
+    ]);
+    await safeQuery(appPool, "ALTER TABLE messages ADD COLUMN pinned TINYINT(1) NOT NULL DEFAULT 0 AFTER is_read", [
+      "ER_DUP_FIELDNAME"
+    ]);
+    await safeQuery(appPool, "ALTER TABLE messages ADD COLUMN pinned_at TIMESTAMP NULL DEFAULT NULL AFTER pinned", [
       "ER_DUP_FIELDNAME"
     ]);
     await runSqlFile(appPool, seedFile);

@@ -1,0 +1,213 @@
+/* Company Onboarding Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.onboarding-root {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #111827;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rem 1rem;
+}
+
+.onboarding-container {
+  width: 100%;
+  max-width: 650px;
+  background: white;
+  padding: 3rem;
+  border-radius: 24px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.stepper {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 3rem;
+}
+
+.step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+}
+
+.step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #94a3b8;
+  z-index: 1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-indicator.active .step-circle {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: white;
+  transform: scale(1.1);
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.25);
+}
+
+.step-indicator.completed .step-circle {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: white;
+}
+
+.step-line {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: #e5e7eb;
+  z-index: 0;
+  transition: background 0.3s ease;
+}
+
+.step-indicator.completed .step-line {
+  background: #2563eb;
+}
+
+.onboarding-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.onboarding-subtitle {
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 2.5rem;
+}
+
+/* Form Styling */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  font-size: 15px;
+  color: #111827;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: #2563eb;
+  ring: 4px solid rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.form-input::placeholder {
+  color: #94a3b8;
+}
+
+/* Buttons */
+.onboarding-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-outline {
+  background: white;
+  border: 1px solid #e5e7eb;
+  color: #475569;
+}
+
+.btn-outline:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+/* Document Cards */
+.doc-card {
+  transition: all 0.2s ease;
+}
+
+.doc-card:hover {
+  border-color: #2563eb;
+  background-color: #f8fafc;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-step {
+  animation: slideIn 0.4s ease-out forwards;
+}
+
+/* Custom Scrollbar for Drawer */
+.drawer-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.drawer-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.drawer-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.drawer-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

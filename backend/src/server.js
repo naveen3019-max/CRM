@@ -4,6 +4,7 @@ import path from "path";
 import app from "./app.js";
 import { env } from "./config/env.js";
 import { verifyDatabaseConnection } from "./config/db.js";
+import { ensureGroupChatSchema } from "./database/groupChatSchema.js";
 import { initSocketServer } from "./sockets/index.js";
 
 async function bootstrap() {
@@ -13,6 +14,7 @@ async function bootstrap() {
   }
 
   await verifyDatabaseConnection();
+  await ensureGroupChatSchema();
 
   const server = http.createServer(app);
   initSocketServer(server);

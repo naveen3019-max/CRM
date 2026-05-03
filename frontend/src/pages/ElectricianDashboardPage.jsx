@@ -19,6 +19,10 @@ export default function ElectricianDashboardPage() {
 
   useEffect(() => {
     async function loadJobs() {
+      if (!token) {
+        return;
+      }
+
       try {
         const response = await apiClient.get("/tasks", withAuth(token));
         const rows = response.data.data || [];

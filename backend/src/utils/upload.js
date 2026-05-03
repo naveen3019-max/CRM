@@ -20,19 +20,51 @@ const storage = multer.diskStorage({
   }
 });
 
-const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-  if (!allowedMimeTypes.includes(file.mimetype)) {
-    cb(new ApiError(400, "Unsupported file type"));
-    return;
-  }
-  cb(null, true);
-};
+function buildUpload({ allowedMimeTypes, fileSizeLimitBytes }) {
+  const fileFilter = (req, file, cb) => {
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      cb(new ApiError(400, "Unsupported file type"));
+      return;
+    }
+    cb(null, true);
+  };
 
-export const upload = multer({
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024
-  },
-  fileFilter
+  return multer({
+    storage,
+    limits: {
+      fileSize: fileSizeLimitBytes
+    },
+    fileFilter
+  });
+}
+
+const defaultAllowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+
+const chatAllowedMimeTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "audio/webm",
+  "audio/webm;codecs=opus",
+  "audio/mp3",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/ogg",
+  "audio/3gpp",
+  "audio/3gpp2",
+  "audio/aac",
+  "audio/flac"
+];
+
+export const upload = buildUpload({
+  allowedMimeTypes: defaultAllowedMimeTypes,
+  fileSizeLimitBytes: 5 * 1024 * 1024
+});
+
+export const chatUpload = buildUpload({
+  allowedMimeTypes: chatAllowedMimeTypes,
+  fileSizeLimitBytes: 10 * 1024 * 1024
 });

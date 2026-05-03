@@ -32,5 +32,11 @@ export const MESSAGE_SCOPE = Object.freeze({
   ADMIN_SALES: "admin_sales",
   ADMIN_VENDOR: "admin_vendor",
   ADMIN_ELECTRICIAN: "admin_electrician",
-  ADMIN_FIELD_WORK: "admin_field_work"
+  ADMIN_FIELD_WORK: "admin_field_work",
+  SALES_VENDOR: "sales_vendor",
+  VENDOR_ELECTRICIAN: "vendor_electrician",
+  VENDOR_CUSTOMER: "vendor_customer",
+  VENDOR_FIELD_WORK: "vendor_field_work",
+  CUSTOMER_ELECTRICIAN: "customer_electrician",
+  SALES_ELECTRICIAN: "sales_electrician"
 });

@@ -1,135 +1,227 @@
+import { ArrowRight, Bot, CheckCircle2, Eye, EyeOff, Globe2, Lock, Mail, User, UserPlus, Zap } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { VerbenaIntroPanel } from "../components/VerbenaIntroPanel.jsx";
 import apiClient from "../services/apiClient";
 import { useAuth } from "../context/AuthContext.jsx";
 
-export default function RegisterPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("customer");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const { login } = useAuth();
-  const navigate = useNavigate();
+const roleOptions = [
+  { value: "customer",    label: "Customer",    desc: "Services & support" },
+  { value: "sales",       label: "Sales",        desc: "Leads & deals" },
+  { value: "vendor",      label: "Vendor",       desc: "Supply & inventory" },
+  { value: "electrician", label: "Electrician",  desc: "Field operations" },
+  { value: "field_work",  label: "Field Work",   desc: "On-site tasks" },
+  { value: "admin",       label: "Admin",        desc: "Full control" },
+];
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+const highlights = [
+  "AI-powered CRM automation & predictive analytics",
+  "Augmented Reality client calling & guided demos",
+  "Virtual Reality training for complex environments",
+  "Role-based secure access across your entire team",
+];
+
+const industries = ["Manufacturing", "Education", "Retail", "Pharma", "Insurance", "Forestry"];
+
+export default function RegisterPage() {
+  const [name, setName]               = useState("");
+  const [email, setEmail]             = useState("");
+  const [password, setPassword]       = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole]               = useState("customer");
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState("");
+  const { login }                     = useAuth();
+  const navigate                      = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
-      const response = await apiClient.post("/auth/signup", {
-        name,
-        email,
-        password,
-        role
-      });
-
-      const payload = response.data.data;
+      const res     = await apiClient.post("/auth/signup", { name, email, password, role });
+      const payload = res.data.data;
       login(payload);
-      navigate(`/${payload.user.role}`);
-    } catch (apiError) {
-      const details = apiError.response?.data?.details;
-      if (Array.isArray(details) && details.length > 0) {
-        setError(details.map((item) => item.msg).join(" | "));
+      if (payload.user.role === "vendor") {
+        navigate("/onboarding");
       } else {
-        setError(apiError.response?.data?.message || "Registration failed. Try another email.");
+        navigate(`/${payload.user.role}`);
       }
+    } catch (err) {
+      const details = err.response?.data?.details;
+      setError(
+        Array.isArray(details) && details.length > 0
+          ? details.map((d) => d.msg).join(" · ")
+          : err.response?.data?.message || "Registration failed. Try another email."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-6xl items-start px-4 py-4 sm:px-6 sm:py-6 lg:items-center">
-      <div className="grid w-full gap-4 lg:grid-cols-[1.2fr_0.95fr] lg:gap-6">
-        <div className="order-2 lg:order-1">
-          <VerbenaIntroPanel compact />
-        </div>
+    <div className="vt-page">
+      <div className="vt-glow vt-glow-a" />
+      <div className="vt-glow vt-glow-b" />
 
-        <div className="glass-panel order-1 w-full p-5 sm:p-8 lg:order-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">Verbena Tech</p>
-          <h1 className="mt-3 font-heading text-2xl font-semibold text-slate-800 sm:text-3xl">Create account</h1>
-          <p className="mt-2 text-sm text-slate-500">Choose your role and create your account.</p>
+      <div className="vt-split">
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <label className="block text-sm font-semibold text-slate-600">
-              Full name
-              <input
-                className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-700 outline-none ring-brand-300 focus:ring"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                type="text"
-                required
-                minLength={2}
-              />
-            </label>
+        {/* ── LEFT: About Verbena Tech ── */}
+        <aside className="vt-about vt-fadein" style={{ "--d": "0ms" }}>
+          <div className="vt-brand">
+            <span className="vt-brand-dot" />
+            <span className="vt-brand-wordmark">Verbena Tech</span>
+          </div>
 
-            <label className="block text-sm font-semibold text-slate-600">
-              Email
-              <input
-                className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-700 outline-none ring-brand-300 focus:ring"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                type="email"
-                required
-              />
-            </label>
+          <div className="vt-about-body">
+            <p className="vt-tagline-label">About the Platform</p>
+            <h1 className="vt-about-headline">
+              Intelligent<br />
+              <span className="vt-accent-text">Enterprise Technology</span>
+            </h1>
+            <p className="vt-about-desc">
+              Verbena Tech delivers end-to-end AI, AR and VR solutions to enterprises
+              across manufacturing, retail, pharma, education, insurance and forestry.
+              Join a platform built by industry-veteran engineers to transform how your
+              organisation operates, trains, and engages with customers.
+            </p>
 
-            <label className="block text-sm font-semibold text-slate-600">
-              Password
-              <input
-                className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-700 outline-none ring-brand-300 focus:ring"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                type="password"
-                required
-                minLength={8}
-                pattern="(?=.*[A-Z])(?=.*[0-9]).{8,}"
-                title="Minimum 8 characters, at least one uppercase letter and one number"
-              />
-              <p className="mt-1 text-xs font-medium text-slate-500">
-                Must include 1 uppercase letter and 1 number.
+            {/* Highlights */}
+            <div className="vt-highlights">
+              {highlights.map((h) => (
+                <div key={h} className="vt-hl-row">
+                  <CheckCircle2 size={14} className="vt-hl-icon" />
+                  <span className="vt-hl-text">{h}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Industries */}
+            <div className="vt-industries">
+              <p className="vt-ind-label">Industries we serve</p>
+              <div className="vt-ind-chips">
+                {industries.map((ind) => (
+                  <span key={ind} className="vt-ind-chip">{ind}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <p className="vt-about-foot">sivakk@verbenatech.in · +91 88797 92818</p>
+        </aside>
+
+        {/* ── RIGHT: Register card ── */}
+        <main className="vt-form-col">
+          <div className="vt-card vt-fadein" style={{ "--d": "80ms" }}>
+
+            <div className="vt-card-top">
+              <div className="vt-card-icon-wrap">
+                <UserPlus size={18} className="vt-card-icon" />
+              </div>
+              <div>
+                <h2 className="vt-card-title">Create Account</h2>
+                <p className="vt-card-sub">Join Verbena Tech's CRM platform</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="vt-form">
+              {/* Name */}
+              <div className="vt-field">
+                <label className="vt-label" htmlFor="reg-name">Full Name</label>
+                <div className="vt-input-shell">
+                  <User className="vt-i-icon" size={15} />
+                  <input
+                    id="reg-name"
+                    className="vt-inp"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="John Doe"
+                    required
+                    minLength={2}
+                    autoComplete="name"
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="vt-field">
+                <label className="vt-label" htmlFor="reg-email">Email</label>
+                <div className="vt-input-shell">
+                  <Mail className="vt-i-icon" size={15} />
+                  <input
+                    id="reg-email"
+                    className="vt-inp"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@email.com"
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="vt-field">
+                <label className="vt-label" htmlFor="reg-password">
+                  Password
+                  <span className="vt-label-hint"> · min 8 chars, 1 uppercase, 1 number</span>
+                </label>
+                <div className="vt-input-shell">
+                  <Lock className="vt-i-icon" size={15} />
+                  <input
+                    id="reg-password"
+                    className="vt-inp"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={8}
+                    pattern="(?=.*[A-Z])(?=.*[0-9]).{8,}"
+                    title="Minimum 8 characters, at least one uppercase letter and one number"
+                    autoComplete="new-password"
+                  />
+                  <button type="button" className="vt-toggle-pw" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}>
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Role */}
+              <div className="vt-field">
+                <label className="vt-label">Role</label>
+                <div className="vt-role-grid">
+                  {roleOptions.map(({ value, label, desc }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setRole(value)}
+                      className={`vt-role-pill${role === value ? " vt-role-pill-on" : ""}`}
+                    >
+                      <span className="vt-rp-label">{label}</span>
+                      <span className="vt-rp-desc">{desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {error && <p className="vt-err">{error}</p>}
+
+              <button id="reg-submit" type="submit" disabled={loading} className="vt-btn-primary">
+                {loading ? <span className="vt-spin" /> : <><span>Create Account</span><ArrowRight size={15} /></>}
+              </button>
+            </form>
+
+            <div className="vt-card-foot">
+              <p className="vt-foot-txt">
+                Already have an account?{" "}
+                <Link to="/" className="vt-foot-link">Sign in</Link>
               </p>
-            </label>
+            </div>
+          </div>
+        </main>
 
-            <label className="block text-sm font-semibold text-slate-600">
-              Role
-              <select
-                className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-700 outline-none ring-brand-300 focus:ring"
-                value={role}
-                onChange={(event) => setRole(event.target.value)}
-                required
-              >
-                <option value="admin">Admin</option>
-                <option value="sales">Sales</option>
-                <option value="customer">Customer</option>
-                <option value="vendor">Vendor</option>
-                <option value="electrician">Electrician</option>
-                <option value="field_work">Field Work</option>
-              </select>
-            </label>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="h-11 w-full rounded-xl bg-brand-600 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
-            >
-              {loading ? "Creating account..." : "Create account"}
-            </button>
-          </form>
-
-          {error ? <p className="mt-3 text-sm text-red-500">{error}</p> : null}
-
-          <p className="mt-5 text-sm text-slate-500">
-            Already have an account?{" "}
-            <Link to="/" className="font-semibold text-brand-700 hover:text-brand-800">
-              Sign in
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );

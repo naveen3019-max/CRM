@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -288,3 +288,566 @@ body {
     transition: none !important;
   }
 }
+
+/* ============================================================
+   VERBENA TECH â€” MINIMAL PROFESSIONAL AUTH SYSTEM
+   Theme: Deep dark Â· Cyan accent Â· Clean split layout
+   ============================================================ */
+
+/* â”€â”€ Page shell â”€â”€ */
+.vt-page {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #07090f;
+  font-family: "Manrope", sans-serif;
+  color: #e2e8f0;
+}
+
+/* Ambient glows â€” subtle, not distracting */
+.vt-glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(100px);
+  opacity: 0.18;
+}
+.vt-glow-a {
+  width: 480px; height: 480px;
+  top: -140px; left: -100px;
+  background: #6366f1;
+}
+.vt-glow-b {
+  width: 360px; height: 360px;
+  bottom: -120px; right: -80px;
+  background: #22d3ee;
+}
+
+/* â”€â”€ Two-column split â”€â”€ */
+.vt-split {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 100vh;
+}
+@media (min-width: 960px) {
+  .vt-split {
+    grid-template-columns: 1.05fr 0.95fr;
+  }
+}
+
+/* â”€â”€ Fade-in reveal â”€â”€ */
+.vt-fadein {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: vt-reveal 550ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--d, 0ms);
+}
+
+/* â”€â”€ LEFT: About panel â”€â”€ */
+.vt-about {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2.5rem 2.75rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.018);
+  order: 2;
+}
+@media (min-width: 960px) {
+  .vt-about {
+    order: 1;
+    padding: 3rem 3.5rem;
+  }
+}
+
+/* Brand line */
+.vt-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 2.5rem;
+}
+.vt-brand-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.7);
+  flex-shrink: 0;
+}
+.vt-brand-wordmark {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+/* About body */
+.vt-about-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.vt-tagline-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #22d3ee;
+  margin: 0;
+}
+
+.vt-about-headline {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: #fff;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+.vt-accent-text {
+  color: #22d3ee;
+}
+
+.vt-about-desc {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: rgba(148, 163, 184, 0.85);
+  margin: 0;
+  max-width: 460px;
+}
+
+/* Services list */
+.vt-services {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+.vt-service-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.025);
+  transition: border-color 210ms ease, background 210ms ease;
+}
+.vt-service-row:hover {
+  border-color: rgba(34, 211, 238, 0.2);
+  background: rgba(34, 211, 238, 0.04);
+}
+.vt-service-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: rgba(34, 211, 238, 0.1);
+  color: #22d3ee;
+  flex-shrink: 0;
+}
+.vt-service-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: rgba(226, 232, 240, 0.95);
+  margin: 0 0 2px;
+}
+.vt-service-desc {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.65);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Highlights (Register page) */
+.vt-highlights {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.vt-hl-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+.vt-hl-icon {
+  color: #22d3ee;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.vt-hl-text {
+  font-size: 0.875rem;
+  color: rgba(203, 213, 225, 0.85);
+  line-height: 1.5;
+}
+
+/* Industries (Register page) */
+.vt-industries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.vt-ind-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(148, 163, 184, 0.6);
+  margin: 0;
+}
+.vt-ind-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.vt-ind-chip {
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: rgba(203, 213, 225, 0.75);
+  white-space: nowrap;
+}
+
+/* Stats bar (Login page) */
+.vt-stats {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+}
+.vt-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+.vt-stat-num {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #22d3ee;
+  line-height: 1;
+}
+.vt-stat-txt {
+  font-size: 0.6875rem;
+  color: rgba(148, 163, 184, 0.6);
+  margin-top: 3px;
+  text-align: center;
+}
+.vt-stat-divider {
+  width: 1px;
+  height: 2rem;
+  background: rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+}
+
+/* About footer note */
+.vt-about-foot {
+  font-size: 0.6875rem;
+  color: rgba(148, 163, 184, 0.4);
+  margin: 2rem 0 0;
+}
+
+/* â”€â”€ RIGHT: Form column â”€â”€ */
+.vt-form-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  order: 1;
+}
+@media (min-width: 960px) {
+  .vt-form-col {
+    order: 2;
+    padding: 3rem 2.5rem;
+  }
+}
+
+/* Card */
+.vt-card {
+  width: 100%;
+  max-width: 26rem;
+  padding: 2rem 1.875rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.034);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  transition: border-color 280ms ease;
+}
+.vt-card:hover {
+  border-color: rgba(34, 211, 238, 0.15);
+}
+@media (min-width: 640px) {
+  .vt-card { padding: 2.25rem 2.25rem; }
+}
+
+/* Card top header */
+.vt-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-bottom: 1.875rem;
+}
+.vt-card-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  flex-shrink: 0;
+}
+.vt-card-icon {
+  color: #22d3ee;
+}
+.vt-card-title {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.375rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.2;
+}
+.vt-card-sub {
+  font-size: 0.8125rem;
+  color: rgba(148, 163, 184, 0.65);
+  margin: 2px 0 0;
+}
+
+/* Form */
+.vt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.vt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.vt-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: rgba(148, 163, 184, 0.75);
+}
+.vt-label-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: rgba(148, 163, 184, 0.45);
+}
+
+/* Input shell */
+.vt-input-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 2.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.vt-input-shell:focus-within {
+  border-color: rgba(34, 211, 238, 0.45);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+  background: rgba(34, 211, 238, 0.03);
+}
+.vt-i-icon {
+  color: rgba(148, 163, 184, 0.4);
+  margin-left: 0.875rem;
+  flex-shrink: 0;
+  transition: color 200ms ease;
+}
+.vt-input-shell:focus-within .vt-i-icon {
+  color: #22d3ee;
+}
+.vt-inp {
+  flex: 1;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: rgba(226, 232, 240, 0.95);
+  font-family: "Manrope", sans-serif;
+}
+.vt-inp::placeholder {
+  color: rgba(148, 163, 184, 0.35);
+}
+.vt-toggle-pw {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  height: 100%;
+  color: rgba(148, 163, 184, 0.4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 180ms ease;
+}
+.vt-toggle-pw:hover { color: #22d3ee; }
+
+/* Role pill grid */
+.vt-role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4375rem;
+}
+@media (min-width: 400px) {
+  .vt-role-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.vt-role-pill {
+  padding: 0.5rem 0.5rem 0.4375rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+.vt-role-pill:hover {
+  border-color: rgba(34, 211, 238, 0.25);
+  background: rgba(34, 211, 238, 0.05);
+}
+.vt-role-pill-on {
+  border-color: rgba(34, 211, 238, 0.5) !important;
+  background: rgba(34, 211, 238, 0.07) !important;
+}
+.vt-rp-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(226, 232, 240, 0.95);
+}
+.vt-rp-desc {
+  display: block;
+  font-size: 0.625rem;
+  color: rgba(148, 163, 184, 0.5);
+  margin-top: 1px;
+  line-height: 1.3;
+}
+
+/* Error */
+.vt-err {
+  font-size: 0.8125rem;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  margin: 0;
+}
+
+/* Primary button */
+.vt-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.875rem;
+  width: 100%;
+  margin-top: 0.25rem;
+  border-radius: 0.625rem;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: "Manrope", sans-serif;
+  color: #07090f;
+  background: #22d3ee;
+  position: relative;
+  overflow: hidden;
+  transition: background 200ms ease, transform 150ms ease, box-shadow 200ms ease;
+  box-shadow: 0 4px 18px rgba(34, 211, 238, 0.3);
+}
+.vt-btn-primary:hover:not(:disabled) {
+  background: #38bdf8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(34, 211, 238, 0.4);
+}
+.vt-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 3px 12px rgba(34, 211, 238, 0.25);
+}
+.vt-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Loading spinner */
+.vt-spin {
+  display: inline-block;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid rgba(7, 9, 15, 0.25);
+  border-top-color: #07090f;
+  border-radius: 50%;
+  animation: vt-spin 0.65s linear infinite;
+}
+
+/* Card footer */
+.vt-card-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: 1.25rem;
+  padding-top: 1.125rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.vt-foot-txt {
+  font-size: 0.8125rem;
+  color: rgba(148, 163, 184, 0.65);
+  margin: 0;
+}
+.vt-foot-link {
+  font-weight: 700;
+  color: #22d3ee;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+.vt-foot-link:hover { color: #67e8f9; }
+.vt-roles-note {
+  font-size: 0.625rem;
+  color: rgba(148, 163, 184, 0.35);
+  margin: 0;
+}
+
+/* â”€â”€ Keyframes â”€â”€ */
+@keyframes vt-reveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes vt-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vt-fadein, .vt-spin {
+    animation: none !important;
+  }
+  .vt-fadein { opacity: 1; transform: none; }
+}
+

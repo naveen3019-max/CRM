@@ -1,0 +1,454 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Send, Loader, AlertCircle, Users, Settings } from "lucide-react";
+import apiClient from "../services/apiClient";
+import { useAuth } from "../context/AuthContext";
+import { useGroup } from "../context/GroupContext";
+import { connectChatSocket } from "../services/socketClient";
+import { MessagePinMenu } from "../components/MessagePinMenu.jsx";
+import { PinnedMessagesPanel } from "../components/PinnedMessagesPanel.jsx";
+import { classifyMessage, parseLocationText, parseRequirementItems, parseScheduleText, summarizeMessage } from "../components/chatMessageUtils.js";
+
+export function GroupChatPage({ groupId }) {
+  const { user, token } = useAuth();
+  const { groupMessages, updateGroupMessages, addGroupMessage } = useGroup();
+  const [messages, setMessages] = useState([]);
+  const [messageInput, setMessageInput] = useState("");
+  const [isLoading, setIsLoading] = useState(Boolean(groupId));
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState(null);
+  const [groupInfo, setGroupInfo] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [showMembers, setShowMembers] = useState(false);
+  const [typingLabel, setTypingLabel] = useState("");
+  const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [pinnedPanelOpen, setPinnedPanelOpen] = useState(false);
+  const [highlightedMessageId, setHighlightedMessageId] = useState(null);
+  const messagesEndRef = useRef(null);
+  const socket = useRef(null);
+  const typingTimerRef = useRef(null);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const refreshPinnedMessages = useCallback(async () => {
+    if (!groupId || !token) return;
+
+    try {
+      const response = await apiClient.get(`/groups/${groupId}/pinned`);
+      setPinnedMessages(response.data.data || []);
+    } catch {
+      setPinnedMessages([]);
+    }
+  }, [groupId, token]);
+
+  // Load group info and members
+  useEffect(() => {
+    if (!groupId || !token) return;
+
+    setIsLoading(true);
+
+    const loadGroupInfo = async () => {
+      try {
+        setIsLoading(true);
+        const [infoRes, membersRes, messagesRes] = await Promise.all([
+          apiClient.get(`/groups/${groupId}`),
+          apiClient.get(`/groups/${groupId}/members`),
+          apiClient.get(`/groups/${groupId}/messages?limit=50&offset=0`),
+        ]);
+
+        setGroupInfo(infoRes.data.data);
+        setMembers(membersRes.data.data || []);
+        setMessages(messagesRes.data.data || []);
+        updateGroupMessages(groupId, messagesRes.data.data || []);
+        await refreshPinnedMessages();
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to load group");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadGroupInfo();
+  }, [groupId, token, updateGroupMessages, refreshPinnedMessages]);
+
+  useEffect(() => {
+    if (!highlightedMessageId) return;
+
+    const target = document.getElementById(`group-message-${highlightedMessageId}`);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    const timer = window.setTimeout(() => setHighlightedMessageId(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [highlightedMessageId, messages]);
+
+  // Connect socket
+  useEffect(() => {
+    if (!groupId || !token) return;
+
+    socket.current = connectChatSocket(token);
+
+    socket.current.emit("join:group", { groupId: Number(groupId) });
+
+    const handleGroupMessage = (payload) => {
+      if (String(payload.groupId) === String(groupId)) {
+        const nextMessage = {
+          id: payload.id || Date.now(),
+          groupId: payload.groupId,
+          senderId: payload.senderId,
+          senderName: payload.senderName,
+          messageBody: payload.message,
+          imageUrl: payload.imageUrl,
+          createdAt: payload.timestamp || new Date().toISOString(),
+        };
+
+        setMessages((previous) => [...previous, nextMessage]);
+        addGroupMessage(groupId, nextMessage);
+      }
+    };
+
+    const handleTyping = (payload) => {
+      if (String(payload.groupId) !== String(groupId)) {
+        return;
+      }
+
+      if (String(payload.userId) === String(user?.id)) {
+        return;
+      }
+
+      const typingMember = members.find((member) => String(member.id) === String(payload.userId));
+      setTypingLabel(typingMember ? `${typingMember.name} is typing...` : "Someone is typing...");
+
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+
+      typingTimerRef.current = window.setTimeout(() => {
+        setTypingLabel("");
+      }, 1600);
+    };
+
+    socket.current.on("group:message", handleGroupMessage);
+    socket.current.on("group:user:typing", handleTyping);
+    socket.current.on("messagePinned", (payload) => {
+      if (String(payload.groupId) === String(groupId)) {
+        refreshPinnedMessages();
+      }
+    });
+    socket.current.on("messageUnpinned", (payload) => {
+      if (String(payload.groupId) === String(groupId)) {
+        refreshPinnedMessages();
+      }
+    });
+
+    return () => {
+      if (socket.current) {
+        socket.current.emit("leave:group", { groupId: Number(groupId) });
+        socket.current.off("group:message", handleGroupMessage);
+        socket.current.off("group:user:typing", handleTyping);
+        socket.current.off("messagePinned");
+        socket.current.off("messageUnpinned");
+      }
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+    };
+  }, [groupId, token, addGroupMessage, members, user?.id, refreshPinnedMessages]);
+
+  // Auto scroll to bottom
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  const handleSendMessage = useCallback(
+    async (e) => {
+      e.preventDefault();
+
+      if (!messageInput.trim()) return;
+
+      setIsSending(true);
+      try {
+        const response = await apiClient.post(`/groups/${groupId}/messages`, {
+          message: messageInput.trim(),
+          imageUrl: null,
+        });
+
+        const newMessage = {
+          id: response.data.data.id,
+          groupId,
+          senderId: user?.id,
+          senderName: user?.name,
+          messageBody: messageInput.trim(),
+          imageUrl: null,
+          createdAt: new Date().toISOString(),
+        };
+
+        setMessages((previous) => [...previous, newMessage]);
+        addGroupMessage(groupId, newMessage);
+        setMessageInput("");
+        setError(null);
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to send message");
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [groupId, messageInput, user?.id, user?.name, addGroupMessage]
+  );
+
+  const handleMessageChange = useCallback(
+    (event) => {
+      setMessageInput(event.target.value);
+
+      if (!token || !groupId) {
+        return;
+      }
+
+      const socketInstance = connectChatSocket(token);
+      if (!socketInstance) {
+        return;
+      }
+
+      socketInstance.emit("group:typing", {
+        groupId: Number(groupId),
+        isTyping: Boolean(event.target.value.trim())
+      });
+    },
+    [groupId, token]
+  );
+
+  const handlePinMessage = useCallback(
+    async (message) => {
+      try {
+        await apiClient.post("/chat/pin-message", { messageId: Number(message.id) });
+        setMessages((previous) =>
+          previous.map((entry) =>
+            String(entry.id) === String(message.id)
+              ? { ...entry, pinned: true, pinnedAt: new Date().toISOString() }
+              : entry
+          )
+        );
+        await refreshPinnedMessages();
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to pin message");
+      }
+    },
+    [refreshPinnedMessages]
+  );
+
+  const handleUnpinMessage = useCallback(
+    async (message) => {
+      try {
+        await apiClient.post("/chat/unpin-message", { messageId: Number(message.id) });
+        setMessages((previous) =>
+          previous.map((entry) =>
+            String(entry.id) === String(message.id)
+              ? { ...entry, pinned: false, pinnedAt: null }
+              : entry
+          )
+        );
+        await refreshPinnedMessages();
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to unpin message");
+      }
+    },
+    [refreshPinnedMessages]
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader className="animate-spin text-blue-600" size={32} />
+      </div>
+    );
+  }
+
+  if (!groupInfo) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-500">
+        <AlertCircle size={32} className="mr-2" />
+        <span>Group not found</span>
+      </div>
+    );
+  }
+
+  const displayMessages = messages.length > 0 ? messages : (groupMessages[groupId] || []);
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">{groupInfo.name}</h2>
+          <p className="text-sm text-gray-500">{members.length} members</p>
+        </div>
+        <button
+          onClick={() => setShowMembers(!showMembers)}
+          className="p-2 hover:bg-gray-100 rounded-lg transition"
+        >
+          <Users size={20} className="text-gray-600" />
+        </button>
+      </div>
+
+      {pinnedMessages.length ? (
+        <div className="border-b border-blue-100 bg-blue-50 px-4 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setPinnedPanelOpen((previous) => !previous)}
+              className="min-w-0 flex-1 text-left"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">📌 Pinned Messages</p>
+              <p className="truncate text-sm text-slate-700">{summarizeMessage(pinnedMessages[0])}</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPinnedPanelOpen(true)}
+              className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-600 hover:text-white"
+            >
+              View All
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Messages */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {error && (
+            <div className="mx-4 mt-2 p-2 bg-red-50 text-red-600 text-sm rounded flex items-center gap-2">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {displayMessages.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <p>No messages yet. Start the conversation!</p>
+              </div>
+            ) : (
+              displayMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  id={`group-message-${msg.id}`}
+                  className={`group flex ${
+                    msg.senderId === user?.id ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`relative max-w-xs px-4 py-2 rounded-lg ${
+                      String(highlightedMessageId) === String(msg.id) ? "ring-2 ring-blue-300 ring-offset-2 ring-offset-white" : ""
+                    } ${
+                      msg.senderId === user?.id
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-900"
+                    }`}
+                  >
+                    {msg.pinned ? (
+                      <div className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${msg.senderId === user?.id ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"}`}>
+                        📌 Pinned
+                      </div>
+                    ) : null}
+
+                    <div className="absolute right-1 top-1 z-10 opacity-100 transition">
+                      <MessagePinMenu
+                        isPinned={Boolean(msg.pinned)}
+                        onPin={() => handlePinMessage(msg)}
+                        onUnpin={() => handleUnpinMessage(msg)}
+                      />
+                    </div>
+
+                    {msg.senderId !== user?.id && (
+                      <p className="text-xs font-semibold mb-1 opacity-75">
+                        {msg.senderName}
+                      </p>
+                    )}
+                    {msg.messageBody && <p className="break-words">{msg.messageBody}</p>}
+                    {msg.imageUrl && (
+                      <img
+                        src={msg.imageUrl}
+                        alt="message"
+                        className="mt-2 max-w-48 rounded"
+                      />
+                    )}
+                    <p
+                      className={`text-xs mt-1 ${
+                        msg.senderId === user?.id
+                          ? "text-blue-100"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      {new Date(msg.createdAt).toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Message Input */}
+          <div className="p-4 border-t border-gray-200">
+            {typingLabel ? <p className="mb-2 text-xs font-medium text-blue-600">{typingLabel}</p> : null}
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <input
+                type="text"
+                value={messageInput}
+                onChange={handleMessageChange}
+                placeholder="Type a message..."
+                disabled={isSending}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={isSending || !messageInput.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition flex items-center gap-2"
+              >
+                {isSending ? (
+                  <Loader size={18} className="animate-spin" />
+                ) : (
+                  <Send size={18} />
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Members Sidebar */}
+        {showMembers && (
+          <div className="w-48 border-l border-gray-200 overflow-y-auto">
+            <div className="p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">Members</h3>
+              <div className="space-y-2">
+                {members.map((member) => (
+                  <div key={member.id} className="p-2 hover:bg-gray-100 rounded">
+                    <p className="text-sm font-medium text-gray-900">
+                      {member.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {member.role} {member.memberRole === "admin" && "(Admin)"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <PinnedMessagesPanel
+              isOpen={pinnedPanelOpen}
+              onClose={() => setPinnedPanelOpen(false)}
+              pinnedMessages={pinnedMessages}
+              onGoToMessage={(messageId) => {
+                setPinnedPanelOpen(false);
+                setHighlightedMessageId(String(messageId));
+              }}
+              title={groupInfo?.name ? `${groupInfo.name} Pinned Messages` : "Pinned Messages"}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

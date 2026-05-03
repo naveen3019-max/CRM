@@ -29,6 +29,15 @@ function parseBoolean(value, fallback = false) {
   return fallback;
 }
 
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return Math.floor(parsed);
+}
+
 const uploadDirSetting = process.env.UPLOAD_DIR || "uploads";
 const resolvedUploadDir = path.isAbsolute(uploadDirSetting)
   ? uploadDirSetting
@@ -48,5 +57,8 @@ export const env = {
   dbPassword: process.env.DB_PASSWORD || "",
   dbSsl: parseBoolean(process.env.DB_SSL, false),
   dbSslRejectUnauthorized: parseBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, true),
+  dbConnectTimeoutMs: parsePositiveInteger(process.env.DB_CONNECT_TIMEOUT_MS, 10000),
+  dbConnectRetries: parsePositiveInteger(process.env.DB_CONNECT_RETRIES, 5),
+  dbConnectRetryDelayMs: parsePositiveInteger(process.env.DB_CONNECT_RETRY_DELAY_MS, 1500),
   uploadDir: resolvedUploadDir
 };

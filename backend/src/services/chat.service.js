@@ -1,22 +1,64 @@
 import { ApiError } from "../utils/ApiError.js";
-import { emitToUser } from "../sockets/state.js";
-import { getCounterpartRoles, validateConversationScope } from "../utils/chatPolicy.js";
+import { emitToGroup, emitToUser } from "../sockets/state.js";
+import {
+  getAllowedScopesForRole,
+  getAvailableChatRolesForRole,
+  getCounterpartRoles,
+  validateConversationScope
+} from "../utils/chatPolicy.js";
 import {
   createConversationRecord,
   createMessageRecord,
+  getConversationById,
+  getMessageById,
   findConversation,
   listConversationMessages,
-  listConversationsForUser
+  listPinnedConversationMessages,
+  listPinnedGroupMessages,
+  listConversationsForUser,
+  listUnreadCountsForUsers,
+  listContactsWithUnreadCounts,
+  markConversationMessagesRead,
+  setMessagePinState
 } from "../repositories/chat.repository.js";
 import { createNotificationRecord } from "../repositories/notification.repository.js";
 import { findUserById, listUsersByRoles } from "../repositories/user.repository.js";
+import { getGroupMembers, isGroupMember, getGroupById } from "../repositories/group.repository.js";
+import { ROLES } from "../utils/constants.js";
 
 export async function getConversations(actor) {
   return listConversationsForUser(actor.id);
 }
 
+export async function getTotalUnread(actor) {
+  const allowedScopes = getAllowedScopesForRole(actor.role);
+  
+  if (!allowedScopes.length) {
+    return 0;
+  }
+
+  const unreadByScope = await Promise.all(
+    allowedScopes.map(async (scope) => {
+      const roles = getCounterpartRoles(scope, actor.role);
+      const contacts = await listContactsWithUnreadCounts(scope, actor.id, roles, actor.id);
+      const scopeUnread = contacts.reduce((sum, contact) => sum + Number(contact.unreadCount || 0), 0);
+      return scopeUnread;
+    })
+  );
+
+  const total = unreadByScope.reduce((sum, count) => sum + count, 0);
+  return total;
+}
+
+
 export async function getContacts(actor, scope) {
   const roles = getCounterpartRoles(scope, actor.role);
+  // Use optimized single query instead of two separate queries
+  return listContactsWithUnreadCounts(scope, actor.id, roles, actor.id);
+}
+
+export async function getAvailableUsers(actor) {
+  const roles = getAvailableChatRolesForRole(actor.role);
   return listUsersByRoles(roles, actor.id);
 }
 
@@ -50,6 +92,7 @@ export async function getMessages(actor, conversationId, limit = 50, offset = 0)
     throw new ApiError(403, "You do not have access to this conversation");
   }
 
+  await markConversationMessagesRead(conversationId, actor.id);
   return listConversationMessages(conversationId, limit, offset);
 }
 
@@ -103,4 +146,145 @@ export async function sendConversationMessage(actor, payload) {
   });
 
   return messagePayload;
+}
+
+function canPinDirectMessage(actor, message) {
+  return Number(message.senderId) === Number(actor.id) || actor.role === ROLES.ADMIN;
+}
+
+async function canPinGroupMessage(actor, message) {
+  if (!(await isGroupMember(Number(message.groupId), actor.id))) {
+    return false;
+  }
+
+  if (Number(message.senderId) === Number(actor.id) || actor.role === ROLES.ADMIN) {
+    return true;
+  }
+
+  const members = await getGroupMembers(Number(message.groupId));
+  const actorMembership = members.find((member) => Number(member.id) === Number(actor.id));
+  return actorMembership?.memberRole === "admin";
+}
+
+export async function pinMessage(actor, messageId) {
+  const message = await getMessageById(messageId);
+  if (!message) {
+    throw new ApiError(404, "Message not found");
+  }
+
+  let eventPayload = { messageId: Number(message.id), pinned: true };
+
+  if (message.isGroupMessage) {
+    if (!(await canPinGroupMessage(actor, message))) {
+      throw new ApiError(403, "You cannot pin this message");
+    }
+
+    await setMessagePinState(message.id, true);
+    const group = await getGroupById(message.groupId);
+    eventPayload = {
+      ...eventPayload,
+      groupId: Number(message.groupId),
+      senderId: Number(message.senderId),
+      groupName: group?.name || null
+    };
+    emitToGroup(message.groupId, "messagePinned", eventPayload);
+    return { message, eventPayload };
+  }
+
+  const conversation = await getConversationById(message.conversationId);
+  if (!conversation) {
+    throw new ApiError(404, "Conversation not found");
+  }
+
+  const isParticipant =
+    Number(conversation.participantLowId) === Number(actor.id) || Number(conversation.participantHighId) === Number(actor.id);
+  if (!isParticipant || !canPinDirectMessage(actor, message)) {
+    throw new ApiError(403, "You cannot pin this message");
+  }
+
+  await setMessagePinState(message.id, true);
+
+  eventPayload = {
+    ...eventPayload,
+    conversationId: Number(message.conversationId),
+    senderId: Number(message.senderId),
+    receiverId: Number(message.receiverId)
+  };
+
+  emitToUser(conversation.participantLowId, "messagePinned", eventPayload);
+  emitToUser(conversation.participantHighId, "messagePinned", eventPayload);
+
+  return { message, eventPayload };
+}
+
+export async function unpinMessage(actor, messageId) {
+  const message = await getMessageById(messageId);
+  if (!message) {
+    throw new ApiError(404, "Message not found");
+  }
+
+  let eventPayload = { messageId: Number(message.id), pinned: false };
+
+  if (message.isGroupMessage) {
+    if (!(await canPinGroupMessage(actor, message))) {
+      throw new ApiError(403, "You cannot unpin this message");
+    }
+
+    await setMessagePinState(message.id, false);
+    eventPayload = {
+      ...eventPayload,
+      groupId: Number(message.groupId),
+      senderId: Number(message.senderId)
+    };
+    emitToGroup(message.groupId, "messageUnpinned", eventPayload);
+    return { message, eventPayload };
+  }
+
+  const conversation = await getConversationById(message.conversationId);
+  if (!conversation) {
+    throw new ApiError(404, "Conversation not found");
+  }
+
+  const isParticipant =
+    Number(conversation.participantLowId) === Number(actor.id) || Number(conversation.participantHighId) === Number(actor.id);
+  if (!isParticipant || !canPinDirectMessage(actor, message)) {
+    throw new ApiError(403, "You cannot unpin this message");
+  }
+
+  await setMessagePinState(message.id, false);
+  eventPayload = {
+    ...eventPayload,
+    conversationId: Number(message.conversationId),
+    senderId: Number(message.senderId),
+    receiverId: Number(message.receiverId)
+  };
+
+  emitToUser(conversation.participantLowId, "messageUnpinned", eventPayload);
+  emitToUser(conversation.participantHighId, "messageUnpinned", eventPayload);
+
+  return { message, eventPayload };
+}
+
+export async function getPinnedConversationMessages(actor, conversationId) {
+  const conversation = await getConversationById(conversationId);
+  if (!conversation) {
+    throw new ApiError(404, "Conversation not found");
+  }
+
+  const isParticipant =
+    Number(conversation.participantLowId) === Number(actor.id) || Number(conversation.participantHighId) === Number(actor.id);
+  if (!isParticipant) {
+    throw new ApiError(403, "You do not have access to this conversation");
+  }
+
+  return listPinnedConversationMessages(conversationId);
+}
+
+export async function getPinnedGroupMessages(actor, groupId) {
+  const isMember = await isGroupMember(groupId, actor.id);
+  if (!isMember) {
+    throw new ApiError(403, "You are not a member of this group");
+  }
+
+  return listPinnedGroupMessages(groupId);
 }

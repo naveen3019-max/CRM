@@ -20,10 +20,25 @@ export async function listNotificationsForUser(userId, limit = 50) {
     [userId, limit]
   );
 
-  return rows.map((row) => ({
-    ...row,
-    payloadJson: row.payloadJson ? JSON.parse(row.payloadJson) : null
-  }));
+  return rows.map((row) => {
+    let parsedPayload = null;
+    if (row.payloadJson) {
+      if (typeof row.payloadJson === 'object') {
+        parsedPayload = row.payloadJson;
+      } else {
+        try {
+          parsedPayload = JSON.parse(row.payloadJson);
+        } catch (e) {
+          console.error("Failed to parse notification payloadJson:", row.payloadJson);
+          parsedPayload = null;
+        }
+      }
+    }
+    return {
+      ...row,
+      payloadJson: parsedPayload
+    };
+  });
 }
 
 export async function markNotificationReadById(notificationId, userId) {

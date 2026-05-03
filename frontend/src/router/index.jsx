@@ -15,6 +15,10 @@ const FieldWorkDashboardPage = lazy(() => import("../pages/FieldWorkDashboardPag
 const RoleChatPage = lazy(() => import("../pages/RoleChatPage.jsx"));
 const ProfilePage = lazy(() => import("../pages/ProfilePage.jsx"));
 const UnauthorizedPage = lazy(() => import("../pages/UnauthorizedPage.jsx"));
+const CompanyOnboardingPage = lazy(() => import("../pages/onboarding/CompanyOnboardingPage.jsx"));
+const CompanyAdminPage = lazy(() => import("../pages/onboarding/CompanyAdminPage.jsx"));
+const VendorRegisterPage = lazy(() => import("../pages/VendorRegisterPage.jsx"));
+const CommunicationPage = lazy(() => import("../pages/communication/CommunicationPage.jsx"));
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
@@ -66,10 +70,13 @@ export function AppRouter() {
     <Routes>
       <Route path="/" element={<RootRoute />} />
       <Route path="/register" element={<RegisterRoute />} />
+      <Route path="/vendor/register" element={<VendorRegisterPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       <Route element={<ProtectedRoute />}>
+        <Route path="/onboarding" element={<CompanyOnboardingPage />} />
         <Route element={<RoleLayout />}>
+          <Route path="/admin/verifications" element={<RoleRoute role="admin" element={<CompanyAdminPage />} />} />
           <Route path="/admin" element={<RoleRoute role="admin" element={<AdminDashboardPage />} />} />
           <Route path="/admin/chat" element={<RoleRoute role="admin" element={<AdminChatPage />} />} />
           <Route path="/admin/profile" element={<RoleRoute role="admin" element={<ProfilePage />} />} />
@@ -109,6 +116,7 @@ export function AppRouter() {
             path="/field_work/profile"
             element={<RoleRoute role="field_work" element={<ProfilePage />} />}
           />
+          <Route path="/communication/:leadId" element={<CommunicationPage />} />
           <Route path="/:role/chat" element={<RedirectToOwnChat />} />
         </Route>
       </Route>

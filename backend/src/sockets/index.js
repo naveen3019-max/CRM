@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import { env } from "../config/env.js";
 import { createCorsOriginChecker } from "../utils/cors.js";
 import { registerChatSocket } from "./chat.socket.js";
+import { registerGroupSocket } from "./group.socket.js";
 import { setIoInstance } from "./state.js";
 
 export function initSocketServer(httpServer) {
@@ -23,6 +24,7 @@ export function initSocketServer(httpServer) {
 
   setIoInstance(io);
   registerChatSocket(io);
+  registerGroupSocket(io);
 
   return io;
 }

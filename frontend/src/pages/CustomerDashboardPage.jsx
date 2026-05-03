@@ -14,6 +14,10 @@ export default function CustomerDashboardPage() {
 
   useEffect(() => {
     async function loadRequests() {
+      if (!token) {
+        return;
+      }
+
       try {
         const response = await apiClient.get("/leads", withAuth(token));
         setRequests(response.data.data || []);

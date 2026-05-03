@@ -62,6 +62,23 @@ export default function VendorDashboardPage() {
   }, [activeFilter, projects]);
 
   useEffect(() => {
+    async function checkVendorStatus() {
+      try {
+        const res = await apiClient.get("/company/status", withAuth(token));
+        if (res.data.success && res.data.data.status !== "approved") {
+          navigate("/onboarding");
+        }
+      } catch (err) {
+        console.error("Failed to check vendor status", err);
+      }
+    }
+
+    if (token) {
+      checkVendorStatus();
+    }
+  }, [token, navigate]);
+
+  useEffect(() => {
     async function loadData() {
       try {
         const [projectsResponse, tasksResponse] = await Promise.all([

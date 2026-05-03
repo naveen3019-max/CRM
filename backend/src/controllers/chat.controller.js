@@ -2,9 +2,14 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import {
   getContacts,
   getConversations,
+  getPinnedConversationMessages,
   getMessages,
+  getTotalUnread,
+  pinMessage,
   openConversation,
-  sendConversationMessage
+  unpinMessage,
+  sendConversationMessage,
+  getAvailableUsers
 } from "../services/chat.service.js";
 
 export const listConversations = asyncHandler(async (req, res) => {
@@ -12,8 +17,18 @@ export const listConversations = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
+export const getTotalUnreadCount = asyncHandler(async (req, res) => {
+  const data = await getTotalUnread(req.user);
+  res.json({ success: true, data: { totalUnreadCount: data } });
+});
+
 export const listChatContacts = asyncHandler(async (req, res) => {
   const data = await getContacts(req.user, req.query.scope);
+  res.json({ success: true, data });
+});
+
+export const listAvailableUsers = asyncHandler(async (req, res) => {
+  const data = await getAvailableUsers(req.user);
   res.json({ success: true, data });
 });
 
@@ -27,6 +42,31 @@ export const getConversationMessages = asyncHandler(async (req, res) => {
   const offset = Number(req.query.offset || 0);
   const data = await getMessages(req.user, Number(req.params.id), limit, offset);
   res.json({ success: true, data });
+});
+
+export const getPinnedMessages = asyncHandler(async (req, res) => {
+  const data = await getPinnedConversationMessages(req.user, Number(req.params.conversationId));
+  res.json({ success: true, data });
+});
+
+export const pinChatMessage = asyncHandler(async (req, res) => {
+  const { messageId } = req.body;
+  if (!messageId) {
+    return res.status(400).json({ success: false, message: "messageId is required" });
+  }
+
+  const { eventPayload } = await pinMessage(req.user, Number(messageId));
+  res.json({ success: true, data: eventPayload });
+});
+
+export const unpinChatMessage = asyncHandler(async (req, res) => {
+  const { messageId } = req.body;
+  if (!messageId) {
+    return res.status(400).json({ success: false, message: "messageId is required" });
+  }
+
+  const { eventPayload } = await unpinMessage(req.user, Number(messageId));
+  res.json({ success: true, data: eventPayload });
 });
 
 export const sendMessage = asyncHandler(async (req, res) => {
