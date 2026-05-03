@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { ApiError } from "../utils/ApiError.js";
 import { ROLES } from "../utils/constants.js";
 import { signAccessToken } from "../utils/jwt.js";
@@ -8,7 +9,10 @@ import {
   findUserByEmail,
   findUserById,
   findUserWithPasswordById,
-  updateUserProfileById
+  updateUserProfileById,
+  updateVerificationToken,
+  findUserByVerificationToken,
+  markEmailAsVerified
 } from "../repositories/user.repository.js";
 
 export async function signupUser(payload) {
@@ -28,13 +32,21 @@ export async function signupUser(payload) {
   });
 
   if (role === ROLES.VENDOR) {
-    await companyRepo.createCompanyProfile({
-      userId,
-      name: payload.name,
-      email: payload.email
-    });
+    // For vendors, require email verification
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    
+    await updateVerificationToken(userId, verificationToken, expiresAt);
+
+    return {
+      message: "Vendor registered successfully. Please verify your email to activate your account.",
+      requiresVerification: true,
+      email: payload.email,
+      userId: userId
+    };
   }
 
+  // For non-vendors, provide immediate login
   const token = signAccessToken({
     id: userId,
     email: payload.email,
@@ -127,5 +139,35 @@ export async function updateUserProfile(actorId, payload) {
     role: updated.role,
     phone: updated.phone || null,
     createdAt: updated.createdAt
+  };
+}
+
+export async function verifyEmail(verificationToken) {
+  const user = await findUserByVerificationToken(verificationToken);
+  if (!user) {
+    throw new ApiError(400, "Invalid or expired verification token");
+  }
+
+  if (user.emailVerified) {
+    throw new ApiError(400, "Email already verified");
+  }
+
+  await markEmailAsVerified(user.id);
+
+  const token = signAccessToken({
+    id: user.id,
+    email: user.email,
+    role: user.role
+  });
+
+  return {
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: null
+    }
   };
 }
