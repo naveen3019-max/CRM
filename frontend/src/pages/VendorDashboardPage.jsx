@@ -52,6 +52,7 @@ export default function VendorDashboardPage() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
   const visibleOrders = useMemo(() => {
     if (activeFilter === "all") {
@@ -62,20 +63,34 @@ export default function VendorDashboardPage() {
   }, [activeFilter, projects]);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function checkVendorStatus() {
       try {
         const res = await apiClient.get("/company/status", withAuth(token));
+        if (!isMounted) {
+          return;
+        }
+
         if (res.data.success && res.data.data.status !== "approved") {
           navigate("/onboarding");
         }
       } catch (err) {
         console.error("Failed to check vendor status", err);
+      } finally {
+        if (isMounted) {
+          setIsCheckingStatus(false);
+        }
       }
     }
 
     if (token) {
       checkVendorStatus();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [token, navigate]);
 
   useEffect(() => {
@@ -102,6 +117,11 @@ export default function VendorDashboardPage() {
     : "0%";
 
   return (
+    isCheckingStatus ? (
+      <section className="rounded-2xl border border-slate-200 bg-white/80 p-8 text-center shadow-soft">
+        <p className="text-sm font-medium text-slate-500">Checking vendor verification status...</p>
+      </section>
+    ) : (
     <section className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <DashboardCard title="Open Orders" value={projects.length} helper="Vendor-linked project orders" />
@@ -231,5 +251,6 @@ export default function VendorDashboardPage() {
         </div>
       </div>
     </section>
+    )
   );
 }

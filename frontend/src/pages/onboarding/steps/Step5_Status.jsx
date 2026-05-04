@@ -2,9 +2,10 @@ import React from 'react';
 import { Clock, CheckCircle2, XCircle, RefreshCw, LogOut } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
-export default function Step5_Status({ formData }) {
+export default function Step5_Status({ formData, onReuploadDocuments }) {
   const { logout } = useAuth();
   const status = formData.status || 'pending';
+  const rejectionReason = formData.rejection_reason || 'Information provided is incomplete or incorrect.';
 
   const renderStatus = () => {
     switch(status) {
@@ -32,15 +33,23 @@ export default function Step5_Status({ formData }) {
             </div>
             <h2 className="text-2xl font-bold text-[#111827] mb-2">Verification Rejected</h2>
             <div className="p-4 bg-red-50 border border-red-100 rounded-2xl mb-6">
-              <p className="text-sm text-red-700 font-medium">Reason: {formData.rejection_reason || 'Information provided is incomplete or incorrect.'}</p>
+              <p className="text-sm text-red-700 font-medium">Reason: {rejectionReason}</p>
             </div>
-            <p className="text-[#64748B] mb-8">Please review your documents and resubmit for verification.</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="onboarding-btn bg-[#111827] text-white px-8 flex items-center gap-2 mx-auto"
-            >
-              <RefreshCw size={18} /> Re-upload Documents
-            </button>
+            <p className="text-[#64748B] mb-8">
+              Please review your profile details, re-upload the required documents, and submit again for verification.
+            </p>
+            <div className="mb-6 rounded-2xl border border-dashed border-red-200 bg-red-50/60 p-4 text-left">
+              <h3 className="text-sm font-semibold text-[#111827] mb-2">Re-upload documents</h3>
+              <p className="text-sm text-[#64748B] mb-3">
+                Replace any incorrect files and submit the onboarding form again.
+              </p>
+              <button
+                onClick={() => onReuploadDocuments ? onReuploadDocuments() : window.location.reload()}
+                className="onboarding-btn btn-outline flex items-center gap-2 mx-auto"
+              >
+                <RefreshCw size={18} /> Open Document Upload
+              </button>
+            </div>
           </div>
         );
       default: // pending
@@ -52,7 +61,7 @@ export default function Step5_Status({ formData }) {
             <h2 className="text-2xl font-bold text-[#111827] mb-2">Verification in Progress</h2>
             <p className="text-[#64748B] mb-8 leading-relaxed">
               Your company is under verification.<br />
-              We'll notify you via email once approved.
+              You can continue working while we review your submission.
             </p>
             <div className="flex flex-col gap-3">
               <button 

@@ -16,6 +16,7 @@ import Step5_Status from './steps/Step5_Status';
 export default function CompanyOnboardingPage() {
   const { token, isAuthenticated, user } = useAuth();
   const [step, setStep] = useState(1);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -63,17 +64,24 @@ export default function CompanyOnboardingPage() {
         
         if (data.status === 'approved') {
           navigate('/vendor');
-        } else if (data.status === 'pending' || data.status === 'rejected') {
-          // Only jump to status page if form has been submitted (has service_type and address)
-          // Otherwise, stay on step 1 to collect details
-          if (data.service_type && data.address) {
-            setStep(6); // Jump to status page
+        } else if (data.status === 'rejected') {
+          setStep(6);
+        } else if (data.status === 'pending') {
+          const hasSubmittedApplication = Boolean(
+            data.service_type ||
+            data.address ||
+            (data.documents || []).length
+          );
+
+          if (hasSubmittedApplication) {
+            setStep(6);
           }
-          // else: stay on step 1 (default state)
         }
       }
     } catch (err) {
       console.error("Status check failed", err);
+    } finally {
+      setIsCheckingStatus(false);
     }
   };
 
@@ -90,27 +98,38 @@ export default function CompanyOnboardingPage() {
 
   return (
     <div className="onboarding-root">
-      {/* Stepper */}
-      <div className="stepper">
-        {steps.map((s) => (
-          <div key={s.id} className={`step-indicator ${step === s.id ? 'active' : ''} ${step > s.id ? 'completed' : ''}`}>
-            <div className="step-circle">
-              {step > s.id ? <Check size={16} /> : s.id}
-            </div>
-            {s.id !== 5 && <span className="step-line"></span>}
-            <span className="text-[10px] font-bold uppercase tracking-wider mt-2 text-slate-400">{s.title}</span>
+      {isCheckingStatus ? (
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="mx-auto mb-3 animate-spin text-[#2563EB]" size={32} />
+            <p className="text-sm font-medium text-[#64748B]">Checking verification status...</p>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <>
+          {/* Stepper */}
+          <div className="stepper">
+            {steps.map((s) => (
+              <div key={s.id} className={`step-indicator ${step === s.id ? 'active' : ''} ${step > s.id ? 'completed' : ''}`}>
+                <div className="step-circle">
+                  {step > s.id ? <Check size={16} /> : s.id}
+                </div>
+                {s.id !== 5 && <span className="step-line"></span>}
+                <span className="text-[10px] font-bold uppercase tracking-wider mt-2 text-slate-400">{s.title}</span>
+              </div>
+            ))}
+          </div>
 
-      <div className="onboarding-container">
-        {step === 1 && <Step1_Details formData={formData} setFormData={setFormData} onNext={nextStep} />}
-        {step === 2 && <Step2_Location formData={formData} setFormData={setFormData} onNext={nextStep} onBack={prevStep} />}
-        {step === 3 && <Step3_Contact formData={formData} setFormData={setFormData} onNext={nextStep} onBack={prevStep} />}
-        {step === 4 && <Step4_Upload formData={formData} setFormData={setFormData} onNext={nextStep} onBack={prevStep} />}
-        {step === 5 && <Step5_Review formData={formData} onNext={nextStep} onBack={prevStep} setStep={setStep} />}
-        {step === 6 && <Step5_Status formData={formData} />}
-      </div>
+          <div className="onboarding-container">
+            {step === 1 && <Step1_Details formData={formData} setFormData={setFormData} onNext={nextStep} />}
+            {step === 2 && <Step2_Location formData={formData} setFormData={setFormData} onNext={nextStep} onBack={prevStep} />}
+            {step === 3 && <Step3_Contact formData={formData} setFormData={setFormData} onNext={nextStep} onBack={prevStep} />}
+            {step === 4 && <Step4_Upload formData={formData} setFormData={setFormData} onNext={nextStep} onBack={prevStep} />}
+            {step === 5 && <Step5_Review formData={formData} onNext={nextStep} onBack={prevStep} setStep={setStep} />}
+            {step === 6 && <Step5_Status formData={formData} onReuploadDocuments={() => setStep(4)} />}
+          </div>
+        </>
+      )}
     </div>
   );
 }
