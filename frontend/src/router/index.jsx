@@ -145,11 +145,6 @@ export function AppRouter() {
             element={<RoleRoute role="customer" element={<RoleChatPage role="customer" />} />}
           />
           <Route path="/customer/profile" element={<RoleRoute role="customer" element={<ProfilePage />} />} />
-          <Route element={<VendorAccessGate />}>
-            <Route path="/vendor" element={<RoleRoute role="vendor" element={<VendorDashboardPage />} />} />
-            <Route path="/vendor/chat" element={<RoleRoute role="vendor" element={<RoleChatPage role="vendor" />} />} />
-            <Route path="/vendor/profile" element={<RoleRoute role="vendor" element={<ProfilePage />} />} />
-          </Route>
           <Route
             path="/electrician"
             element={<RoleRoute role="electrician" element={<ElectricianDashboardPage />} />}
@@ -176,6 +171,13 @@ export function AppRouter() {
           />
           <Route path="/communication/:leadId" element={<CommunicationPage />} />
           <Route path="/:role/chat" element={<RedirectToOwnChat />} />
+        </Route>
+        <Route element={<VendorAccessGate />}>
+          <Route element={<RoleLayout />}>
+            <Route path="/vendor" element={<RoleRoute role="vendor" element={<VendorDashboardPage />} />} />
+            <Route path="/vendor/chat" element={<RoleRoute role="vendor" element={<RoleChatPage role="vendor" />} />} />
+            <Route path="/vendor/profile" element={<RoleRoute role="vendor" element={<ProfilePage />} />} />
+          </Route>
         </Route>
       </Route>
 
