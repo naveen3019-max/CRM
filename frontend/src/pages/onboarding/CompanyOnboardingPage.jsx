@@ -64,7 +64,12 @@ export default function CompanyOnboardingPage() {
         if (data.status === 'approved') {
           navigate('/vendor');
         } else if (data.status === 'pending' || data.status === 'rejected') {
-          setStep(6); // Jump to status page
+          // Only jump to status page if form has been submitted (has service_type and address)
+          // Otherwise, stay on step 1 to collect details
+          if (data.service_type && data.address) {
+            setStep(6); // Jump to status page
+          }
+          // else: stay on step 1 (default state)
         }
       }
     } catch (err) {
