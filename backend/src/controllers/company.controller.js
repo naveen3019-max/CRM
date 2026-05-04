@@ -21,8 +21,12 @@ export const uploadDoc = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "No file uploaded" });
   }
   
-  const fileUrl = `/uploads/${req.file.filename}`;
   const { docType } = req.body;
+  if (!docType) {
+    return res.status(400).json({ success: false, message: "Document type (docType) is required" });
+  }
+  
+  const fileUrl = `/uploads/${req.file.filename}`;
   
   await companyService.saveDocument(req.user.id, docType, fileUrl, req.file.originalname);
   res.json({ success: true, data: { fileUrl } });
