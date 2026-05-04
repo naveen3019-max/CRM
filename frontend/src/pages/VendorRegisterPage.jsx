@@ -25,9 +25,11 @@ export default function VendorRegisterPage() {
         password, 
         role: "vendor" 
       });
+      
       const payload = res.data.data;
+      
+      // Log in vendor and go to onboarding
       login(payload);
-      // After registration, always go to onboarding
       navigate("/onboarding");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Try another email.");
