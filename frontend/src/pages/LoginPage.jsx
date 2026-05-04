@@ -27,7 +27,11 @@ export default function LoginPage() {
       const res     = await apiClient.post("/auth/login", { email, password });
       const payload = res.data.data;
       login(payload);
-      navigate(`/${payload.user.role}`);
+      if (payload.user.role === "vendor") {
+        navigate("/onboarding", { replace: true });
+      } else {
+        navigate(`/${payload.user.role}`, { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please check your credentials.");
     } finally {

@@ -33,6 +33,9 @@ function ProtectedRoute() {
 function RootRoute() {
   const { isAuthenticated, user } = useAuth();
   if (isAuthenticated && user?.role) {
+    if (user.role === "vendor") {
+      return <Navigate to="/onboarding" replace />;
+    }
     return <Navigate to={`/${user.role}`} replace />;
   }
   return <LoginPage />;
@@ -41,6 +44,9 @@ function RootRoute() {
 function RegisterRoute() {
   const { isAuthenticated, user } = useAuth();
   if (isAuthenticated && user?.role) {
+    if (user.role === "vendor") {
+      return <Navigate to="/onboarding" replace />;
+    }
     return <Navigate to={`/${user.role}`} replace />;
   }
   return <RegisterPage />;
@@ -54,6 +60,9 @@ function RedirectToOwnChat() {
 function CatchAllRoute() {
   const { isAuthenticated, user } = useAuth();
   if (isAuthenticated && user?.role) {
+    if (user.role === "vendor") {
+      return <Navigate to="/onboarding" replace />;
+    }
     return <Navigate to={`/${user.role}`} replace />;
   }
   return <Navigate to="/" replace />;
