@@ -1,10 +1,12 @@
-import { lazy } from "react";
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { lazy, useEffect, useState } from "react";
+import { Navigate, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { RoleLayout } from "../layouts/RoleLayout.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import apiClient, { withAuth } from "../services/apiClient";
 
 const LoginPage = lazy(() => import("../pages/LoginPage.jsx"));
 const RegisterPage = lazy(() => import("../pages/RegisterPage.jsx"));
+const VerifyEmailPage = lazy(() => import("../pages/VerifyEmailPage.jsx"));
 const AdminDashboardPage = lazy(() => import("../pages/AdminDashboardPage.jsx"));
 const AdminChatPage = lazy(() => import("../pages/AdminChatPage.jsx"));
 const SalesDashboardPage = lazy(() => import("../pages/SalesDashboardPage.jsx"));
@@ -65,12 +67,66 @@ function RoleRoute({ role, element }) {
   return element;
 }
 
+function VendorAccessGate() {
+  const { token, isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkVendorStatus() {
+      if (!isAuthenticated || !token || user?.role !== "vendor") {
+        if (isMounted) {
+          setChecking(false);
+        }
+        return;
+      }
+
+      try {
+        const response = await apiClient.get("/company/status", withAuth(token));
+        if (!isMounted) {
+          return;
+        }
+
+        const status = response.data?.data?.status;
+        if (status !== "approved") {
+          navigate("/onboarding", { replace: true });
+          return;
+        }
+      } catch {
+        if (isMounted) {
+          navigate("/onboarding", { replace: true });
+          return;
+        }
+      } finally {
+        if (isMounted) {
+          setChecking(false);
+        }
+      }
+    }
+
+    checkVendorStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, navigate, token, user?.role]);
+
+  if (checking) {
+    return <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">Checking verification status...</div>;
+  }
+
+  return <Outlet />;
+}
+
 export function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<RootRoute />} />
       <Route path="/register" element={<RegisterRoute />} />
       <Route path="/vendor/register" element={<VendorRegisterPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       <Route element={<ProtectedRoute />}>
@@ -89,9 +145,11 @@ export function AppRouter() {
             element={<RoleRoute role="customer" element={<RoleChatPage role="customer" />} />}
           />
           <Route path="/customer/profile" element={<RoleRoute role="customer" element={<ProfilePage />} />} />
-          <Route path="/vendor" element={<RoleRoute role="vendor" element={<VendorDashboardPage />} />} />
-          <Route path="/vendor/chat" element={<RoleRoute role="vendor" element={<RoleChatPage role="vendor" />} />} />
-          <Route path="/vendor/profile" element={<RoleRoute role="vendor" element={<ProfilePage />} />} />
+          <Route element={<VendorAccessGate />}>
+            <Route path="/vendor" element={<RoleRoute role="vendor" element={<VendorDashboardPage />} />} />
+            <Route path="/vendor/chat" element={<RoleRoute role="vendor" element={<RoleChatPage role="vendor" />} />} />
+            <Route path="/vendor/profile" element={<RoleRoute role="vendor" element={<ProfilePage />} />} />
+          </Route>
           <Route
             path="/electrician"
             element={<RoleRoute role="electrician" element={<ElectricianDashboardPage />} />}

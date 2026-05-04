@@ -42,9 +42,9 @@ export default function RegisterPage() {
       const payload = res.data.data;
       login(payload);
       if (payload.user.role === "vendor") {
-        navigate("/onboarding");
+        navigate("/onboarding", { replace: true });
       } else {
-        navigate(`/${payload.user.role}`);
+        navigate(`/${payload.user.role}`, { replace: true });
       }
     } catch (err) {
       const details = err.response?.data?.details;

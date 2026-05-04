@@ -30,7 +30,7 @@ export default function VendorRegisterPage() {
       
       // Log in vendor and go to onboarding
       login(payload);
-      navigate("/onboarding");
+      navigate("/onboarding", { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Try another email.");
     } finally {
