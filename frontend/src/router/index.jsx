@@ -34,7 +34,7 @@ function RootRoute() {
   const { isAuthenticated, user } = useAuth();
   if (isAuthenticated && user?.role) {
     if (user.role === "vendor") {
-      return <Navigate to="/onboarding" replace />;
+      return <Navigate to={user.companyStatus === "approved" ? "/vendor" : "/onboarding"} replace />;
     }
     return <Navigate to={`/${user.role}`} replace />;
   }
@@ -45,7 +45,7 @@ function RegisterRoute() {
   const { isAuthenticated, user } = useAuth();
   if (isAuthenticated && user?.role) {
     if (user.role === "vendor") {
-      return <Navigate to="/onboarding" replace />;
+      return <Navigate to={user.companyStatus === "approved" ? "/vendor" : "/onboarding"} replace />;
     }
     return <Navigate to={`/${user.role}`} replace />;
   }
@@ -61,7 +61,7 @@ function CatchAllRoute() {
   const { isAuthenticated, user } = useAuth();
   if (isAuthenticated && user?.role) {
     if (user.role === "vendor") {
-      return <Navigate to="/onboarding" replace />;
+      return <Navigate to={user.companyStatus === "approved" ? "/vendor" : "/onboarding"} replace />;
     }
     return <Navigate to={`/${user.role}`} replace />;
   }
@@ -86,6 +86,23 @@ function VendorAccessGate() {
 
     async function checkVendorStatus() {
       if (!isAuthenticated || !token || user?.role !== "vendor") {
+        if (isMounted) {
+          setChecking(false);
+        }
+        return;
+      }
+
+      // If status is already known as approved in auth payload, skip API verification.
+      if (user?.companyStatus === "approved") {
+        if (isMounted) {
+          setChecking(false);
+        }
+        return;
+      }
+
+      // Non-approved vendors should stay in onboarding flow.
+      if (user?.companyStatus && user.companyStatus !== "approved") {
+        navigate("/onboarding", { replace: true });
         if (isMounted) {
           setChecking(false);
         }

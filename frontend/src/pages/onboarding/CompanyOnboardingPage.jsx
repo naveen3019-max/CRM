@@ -14,7 +14,7 @@ import Step5_Review from './steps/Step5_Review';
 import Step5_Status from './steps/Step5_Status';
 
 export default function CompanyOnboardingPage() {
-  const { token, isAuthenticated, user } = useAuth();
+  const { token, isAuthenticated, user, updateUser } = useAuth();
   const [step, setStep] = useState(1);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [formData, setFormData] = useState({
@@ -61,9 +61,13 @@ export default function CompanyOnboardingPage() {
       if (res.data.success && res.data.data) {
         const data = res.data.data;
         setFormData(prev => ({ ...prev, ...data }));
+
+        if (user?.role === 'vendor' && user?.companyStatus !== data.status) {
+          updateUser({ ...user, companyStatus: data.status });
+        }
         
         if (data.status === 'approved') {
-          navigate('/vendor');
+          navigate('/vendor', { replace: true });
         } else if (data.status === 'rejected') {
           setStep(6);
         } else if (data.status === 'pending') {

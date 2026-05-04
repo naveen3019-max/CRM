@@ -28,7 +28,7 @@ export default function LoginPage() {
       const payload = res.data.data;
       login(payload);
       if (payload.user.role === "vendor") {
-        navigate("/onboarding", { replace: true });
+        navigate(payload.user.companyStatus === "approved" ? "/vendor" : "/onboarding", { replace: true });
       } else {
         navigate(`/${payload.user.role}`, { replace: true });
       }

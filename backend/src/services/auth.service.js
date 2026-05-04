@@ -1,5 +1,4 @@
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
 import { ApiError } from "../utils/ApiError.js";
 import { ROLES } from "../utils/constants.js";
 import { signAccessToken } from "../utils/jwt.js";
@@ -52,7 +51,8 @@ export async function signupUser(payload) {
         name: payload.name,
         email: payload.email,
         role,
-        phone: null
+        phone: null,
+        companyStatus: "pending"
       }
     };
   }
@@ -92,6 +92,12 @@ export async function loginUser(payload) {
   }
 
   const token = signAccessToken(user);
+  let companyStatus;
+
+  if (user.role === ROLES.VENDOR) {
+    const company = await companyRepo.findCompanyByUserId(user.id);
+    companyStatus = company?.status || "not_started";
+  }
 
   return {
     token,
@@ -100,7 +106,8 @@ export async function loginUser(payload) {
       name: user.name,
       email: user.email,
       role: user.role,
-      phone: user.phone || null
+      phone: user.phone || null,
+      ...(user.role === ROLES.VENDOR ? { companyStatus } : {})
     }
   };
 }
@@ -111,13 +118,20 @@ export async function getUserProfile(actorId) {
     throw new ApiError(404, "User not found");
   }
 
+  let companyStatus;
+  if (user.role === ROLES.VENDOR) {
+    const company = await companyRepo.findCompanyByUserId(actorId);
+    companyStatus = company?.status || "not_started";
+  }
+
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
     phone: user.phone || null,
-    createdAt: user.createdAt
+    createdAt: user.createdAt,
+    ...(user.role === ROLES.VENDOR ? { companyStatus } : {})
   };
 }
 
