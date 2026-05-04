@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Upload, X, FileText, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, X, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { companyApi } from '../../../services/companyApi';
 
 export default function Step4_Upload({ formData, setFormData, onNext, onBack }) {
   const [uploading, setUploading] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
 
   const docCategories = [
     { key: 'gst_certificate', label: 'GST Certificate', required: true },
@@ -18,6 +19,7 @@ export default function Step4_Upload({ formData, setFormData, onNext, onBack }) 
     if (!file) return;
 
     setUploading(docType);
+    setUploadError(null);
     try {
       const uploadData = new FormData();
       uploadData.append('document', file);
@@ -39,7 +41,8 @@ export default function Step4_Upload({ formData, setFormData, onNext, onBack }) 
         });
       }
     } catch (err) {
-      alert("Upload failed. Please try again.");
+      const errorMsg = err.response?.data?.message || "Upload failed. Please try again.";
+      setUploadError(`${docType}: ${errorMsg}`);
     } finally {
       setUploading(null);
     }
@@ -64,6 +67,17 @@ export default function Step4_Upload({ formData, setFormData, onNext, onBack }) 
         <h2 className="onboarding-title">Document Upload (KYC)</h2>
         <p className="onboarding-subtitle">Please upload clear copies of the following documents.</p>
       </div>
+
+      {uploadError && (
+        <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-3">
+          <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-900">Upload Error</p>
+            <p className="text-sm text-red-700 mt-1">{uploadError}</p>
+            <p className="text-xs text-red-600 mt-2">Max file size: 5MB. Allowed formats: PDF, JPEG, JPG, PNG</p>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         {docCategories.map((cat) => {
