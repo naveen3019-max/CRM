@@ -32,17 +32,28 @@ export async function signupUser(payload) {
   });
 
   if (role === ROLES.VENDOR) {
-    // For vendors, require email verification
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    
-    await updateVerificationToken(userId, verificationToken, expiresAt);
+    // For vendors, create a company profile immediately and allow onboarding
+    await companyRepo.createCompanyProfile({
+      userId,
+      name: payload.name,
+      email: payload.email
+    });
+
+    const token = signAccessToken({
+      id: userId,
+      email: payload.email,
+      role
+    });
 
     return {
-      message: "Vendor registered successfully. Please verify your email to activate your account.",
-      requiresVerification: true,
-      email: payload.email,
-      userId: userId
+      token,
+      user: {
+        id: userId,
+        name: payload.name,
+        email: payload.email,
+        role,
+        phone: null
+      }
     };
   }
 
