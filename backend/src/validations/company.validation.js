@@ -7,7 +7,7 @@ export const registerValidation = [
 ];
 
 export const businessInfoValidation = [
-  body("service_type").isIn(["Solar Installation", "Electrical Services", "CCTV Installation"]).withMessage("Invalid service type"),
+  body("service_type").notEmpty().withMessage("Service type is required").isString().withMessage("Service type must be text"),
   body("description").optional({ checkFalsy: true }).isString(),
   body("years_of_experience").optional({ checkFalsy: true }).custom((value) => {
     if (value === '' || value === null) return true;

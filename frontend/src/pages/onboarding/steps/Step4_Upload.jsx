@@ -14,6 +14,26 @@ export default function Step4_Upload({ formData, setFormData, onNext, onBack }) 
     { key: 'bank_proof', label: 'Bank Proof (Optional)', required: false },
   ];
 
+  const getDocLabel = (docType) => docCategories.find((doc) => doc.key === docType)?.label || 'Document';
+
+  const getFriendlyUploadError = (docType, backendMessage) => {
+    const message = backendMessage || 'Please try again.';
+
+    if (message.toLowerCase().includes('company profile not found')) {
+      return `${getDocLabel(docType)} could not be uploaded because your company profile is not yet available. Please complete the onboarding details and try again.`;
+    }
+
+    if (message.toLowerCase().includes('file too large')) {
+      return `${getDocLabel(docType)} could not be uploaded because the file exceeds the 5MB limit.`;
+    }
+
+    if (message.toLowerCase().includes('invalid file type') || message.toLowerCase().includes('unsupported format')) {
+      return `${getDocLabel(docType)} could not be uploaded because the file format is not supported.`;
+    }
+
+    return `${getDocLabel(docType)} could not be uploaded. ${message}`;
+  };
+
   const handleFileUpload = async (e, docType) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -42,7 +62,7 @@ export default function Step4_Upload({ formData, setFormData, onNext, onBack }) 
       }
     } catch (err) {
       const errorMsg = err.response?.data?.message || "Upload failed. Please try again.";
-      setUploadError(`${docType}: ${errorMsg}`);
+      setUploadError(getFriendlyUploadError(docType, errorMsg));
     } finally {
       setUploading(null);
     }

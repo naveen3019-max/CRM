@@ -14,6 +14,7 @@ import { GroupChatPage } from "./GroupChatPage.jsx";
 import { GroupList } from "../components/GroupList.jsx";
 import apiClient, { withAuth } from "../services/apiClient";
 import { connectChatSocket } from "../services/socketClient.js";
+import { useLocation } from "react-router-dom";
 
 const chatConfigByRole = {
   sales: {
@@ -67,12 +68,13 @@ const chatConfigByRole = {
 export default function RoleChatPage({ role }) {
   const { token, user } = useAuth();
   const { selectedGroupId } = useGroup();
+  const location = useLocation();
   const config = chatConfigByRole[role] || chatConfigByRole.customer;
   const scopeOptions = config.scopes || [{ label: "Contacts", value: config.scope }];
-  const [activeScope, setActiveScope] = useState(scopeOptions[0]?.value || config.scope);
+  const [activeScope, setActiveScope] = useState(() => location.state?.scope || scopeOptions[0]?.value || config.scope);
   const [chatMode, setChatMode] = useState("contacts");
   const [contacts, setContacts] = useState([]);
-  const [chatUserId, setChatUserId] = useState("");
+  const [chatUserId, setChatUserId] = useState(() => String(location.state?.targetUserId || ""));
   const [conversationId, setConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
@@ -103,6 +105,15 @@ export default function RoleChatPage({ role }) {
   useEffect(() => {
     setActiveScope(scopeOptions[0]?.value || config.scope);
   }, [role]);
+
+  useEffect(() => {
+    if (location.state?.scope) {
+      setActiveScope(location.state.scope);
+    }
+    if (location.state?.targetUserId) {
+      setChatUserId(String(location.state.targetUserId));
+    }
+  }, [location.state?.scope, location.state?.targetUserId]);
 
   useEffect(() => {
     setContacts([]);

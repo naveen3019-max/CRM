@@ -1,6 +1,6 @@
 -- Update Companies Table with new fields
 ALTER TABLE companies
-ADD COLUMN service_type ENUM('Solar Installation', 'Electrical Services', 'CCTV Installation') AFTER name,
+ADD COLUMN service_type VARCHAR(255) AFTER name,
 ADD COLUMN description TEXT AFTER service_type,
 ADD COLUMN years_of_experience INT AFTER description,
 ADD COLUMN city VARCHAR(100) AFTER address,

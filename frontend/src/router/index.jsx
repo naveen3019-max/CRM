@@ -21,6 +21,7 @@ const CompanyOnboardingPage = lazy(() => import("../pages/onboarding/CompanyOnbo
 const CompanyAdminPage = lazy(() => import("../pages/onboarding/CompanyAdminPage.jsx"));
 const VendorRegisterPage = lazy(() => import("../pages/VendorRegisterPage.jsx"));
 const CommunicationPage = lazy(() => import("../pages/communication/CommunicationPage.jsx"));
+const ChatRedirectPage = lazy(() => import("../pages/ChatRedirectPage.jsx"));
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
@@ -152,6 +153,7 @@ export function AppRouter() {
       <Route path="/" element={<RootRoute />} />
       <Route path="/register" element={<RegisterRoute />} />
       <Route path="/vendor/register" element={<VendorRegisterPage />} />
+      <Route path="/chat/:chatId" element={<ChatRedirectPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 

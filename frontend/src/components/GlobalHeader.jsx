@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, User, LogOut, Settings, LayoutGrid, CheckCircle, Briefcase, Users, Handshake, Loader2, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../services/apiClient';
+import { formatRoleLabel } from './chatMessageUtils.js';
 
 export default function GlobalHeader() {
   const { user, token, logout } = useAuth();
@@ -11,11 +12,14 @@ export default function GlobalHeader() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [openingChat, setOpeningChat] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const searchRef = useRef(null);
+  const searchRequestRef = useRef(0);
 
   useEffect(() => {
     if (user?.role === 'admin' && token) {
@@ -33,28 +37,145 @@ export default function GlobalHeader() {
     }
   };
 
-  const handleSearch = async (val) => {
-    setSearchQuery(val);
-    if (val.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    try {
-      const res = await apiClient.get(`/search/global?q=${val}`);
-      setSearchResults(res.data.data);
-    } catch (err) {
-      console.error("Search failed");
-    } finally {
-      setSearching(false);
-    }
-  };
-
   const closeSearch = () => {
     setSearchOpen(false);
     setSearchQuery('');
     setSearchResults([]);
+    setSearching(false);
+    setOpeningChat(false);
+    setActiveIndex(-1);
   };
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        closeSearch();
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      setActiveIndex(-1);
+      return;
+    }
+
+    const requestId = ++searchRequestRef.current;
+    const timeoutId = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await apiClient.get('/users/search', { params: { query } });
+        if (requestId !== searchRequestRef.current) {
+          return;
+        }
+
+        const results = Array.isArray(res.data?.data) ? res.data.data : [];
+        setSearchResults(results);
+        setActiveIndex(results.length ? 0 : -1);
+        setSearchOpen(true);
+      } catch (err) {
+        if (requestId === searchRequestRef.current) {
+          setSearchResults([]);
+          setActiveIndex(-1);
+        }
+      } finally {
+        if (requestId === searchRequestRef.current) {
+          setSearching(false);
+        }
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const highlightText = (text, query) => {
+    const source = String(text || '');
+    const normalized = String(query || '').trim().toLowerCase();
+    if (!normalized) {
+      return source;
+    }
+
+    const parts = normalized.split(/\s+/).filter(Boolean);
+    if (!parts.length) {
+      return source;
+    }
+
+    const regex = new RegExp(`(${parts.map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'ig');
+    const split = source.split(regex);
+
+    return split.map((part, index) =>
+      parts.some((term) => term && part.toLowerCase() === term) ? (
+        <mark key={`${part}-${index}`} className="rounded bg-amber-100 px-0.5 text-inherit">{part}</mark>
+      ) : (
+        <React.Fragment key={`${part}-${index}`}>{part}</React.Fragment>
+      )
+    );
+  };
+
+  const openChat = async (result) => {
+    if (!result || openingChat) {
+      return;
+    }
+
+    setOpeningChat(true);
+    try {
+      const res = await apiClient.post('/chat/get-or-create', { targetUserId: result.id });
+      const chatId = res.data?.data?.chatId;
+      const scope = res.data?.data?.scope;
+
+      if (!chatId) {
+        throw new Error('Missing chat id');
+      }
+
+      navigate(`/chat/${chatId}`, {
+        state: {
+          targetUserId: result.id,
+          scope
+        }
+      });
+      closeSearch();
+    } catch (error) {
+      console.error('Failed to open chat', error);
+    } finally {
+      setOpeningChat(false);
+    }
+  };
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      closeSearch();
+      return;
+    }
+
+    if (!searchResults.length && event.key !== 'Enter') {
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveIndex((previous) => (previous + 1) % searchResults.length);
+      setSearchOpen(true);
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveIndex((previous) => (previous - 1 + searchResults.length) % searchResults.length);
+      setSearchOpen(true);
+    }
+
+    if (event.key === 'Enter' && activeIndex >= 0 && searchResults[activeIndex]) {
+      event.preventDefault();
+      openChat(searchResults[activeIndex]);
+    }
+  };
+
+  const roleLabel = useMemo(() => (role) => formatRoleLabel(role), []);
 
   return (
     <header className="sticky top-0 z-40 glass-panel mb-4 flex flex-col gap-3 border-b border-white/50 px-3 py-3 backdrop-blur-md sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:px-4">
@@ -64,11 +185,15 @@ export default function GlobalHeader() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-500 transition-colors" size={18} />
           <input 
             type="text"
-            placeholder="Search everything... (Users, Leads, Vendors)"
+            placeholder="Search electricians, vendors, locations..."
             className="w-full bg-slate-100/50 border border-transparent focus:bg-white focus:border-brand-200 rounded-2xl pl-10 pr-4 py-2 text-sm outline-none transition-all shadow-sm group-focus-within:shadow-md"
             value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSearchOpen(true);
+            }}
             onFocus={() => setSearchOpen(true)}
+            onKeyDown={handleSearchKeyDown}
           />
           {searchQuery && (
             <button onClick={closeSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -81,36 +206,43 @@ export default function GlobalHeader() {
         {searchOpen && (searchQuery.length >= 2 || searching) && (
           <div className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="p-2 border-b border-slate-50 bg-slate-50/50">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Results</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Smart Search</span>
             </div>
             <div className="max-h-[400px] overflow-y-auto">
-              {searching ? (
+              {searching || openingChat ? (
                 <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-brand-500" /></div>
               ) : searchResults.length > 0 ? (
-                searchResults.map(result => (
+                searchResults.slice(0, 10).map((result, index) => (
                   <button 
-                    key={`${result.type}-${result.id}`}
-                    onClick={() => {
-                      navigate(`/${result.type === 'vendor' ? 'admin/verifications' : result.type === 'user' ? 'admin?tab=users' : 'sales'}`);
-                      closeSearch();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
+                    key={`${result.role}-${result.id}`}
+                    onClick={() => openChat(result)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${index === activeIndex ? 'bg-brand-50/70' : ''}`}
                   >
                     <div className={`p-2 rounded-lg ${
-                      result.type === 'user' ? 'bg-blue-50 text-blue-600' :
-                      result.type === 'vendor' ? 'bg-amber-50 text-amber-600' :
-                      'bg-emerald-50 text-emerald-600'
+                      result.role === 'vendor' ? 'bg-amber-50 text-amber-600' :
+                      result.role === 'electrician' ? 'bg-blue-50 text-blue-600' :
+                      result.role === 'field_work' ? 'bg-emerald-50 text-emerald-600' :
+                      'bg-slate-100 text-slate-600'
                     }`}>
-                      {result.type === 'user' ? <User size={16} /> : result.type === 'vendor' ? <Handshake size={16} /> : <Briefcase size={16} />}
+                      {result.role === 'vendor' ? <Handshake size={16} /> : result.role === 'electrician' ? <Briefcase size={16} /> : <Users size={16} />}
                     </div>
-                    <div className="text-left">
-                      <p className="text-sm font-bold text-slate-800">{result.name}</p>
-                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">{result.type}</p>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="text-sm font-bold text-slate-800">{highlightText(result.name, searchQuery)}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 uppercase tracking-wide text-slate-600">{roleLabel(result.role)}</span>
+                        <span className="inline-flex items-center gap-1">
+                          <span className={`h-2 w-2 rounded-full ${result.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                          {result.isOnline ? 'Online' : 'Offline'}
+                        </span>
+                        {result.location ? <span className="truncate text-slate-400">{highlightText(result.location, searchQuery)}</span> : null}
+                      </div>
                     </div>
                   </button>
                 ))
               ) : (
-                <div className="p-8 text-center text-slate-400 text-sm italic">No results found for "{searchQuery}"</div>
+                <div className="p-8 text-center text-slate-400 text-sm italic">
+                  No results found for "{searchQuery}"
+                </div>
               )}
             </div>
           </div>

@@ -1,9 +1,18 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { getUserProfile, loginUser, signupUser, updateUserProfile } from "../services/auth.service.js";
+import { getUserProfile, loginUser, signupUser, updateUserProfile, verifyEmail } from "../services/auth.service.js";
 
 export const signup = asyncHandler(async (req, res) => {
   const result = await signupUser(req.body);
   res.status(201).json({ success: true, data: result });
+});
+
+export const verify = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    return res.status(400).json({ success: false, message: "Verification token is required" });
+  }
+  const result = await verifyEmail(token);
+  res.json({ success: true, data: result });
 });
 
 export const login = asyncHandler(async (req, res) => {

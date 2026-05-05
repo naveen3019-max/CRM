@@ -8,6 +8,7 @@ import { notificationsRouter } from "./notifications.routes.js";
 import { projectsRouter } from "./projects.routes.js";
 import { tasksRouter } from "./tasks.routes.js";
 import groupsRouter from "./groups.routes.js";
+import { usersRouter } from "./users.routes.js";
 
 import { companyRouter } from "./company.routes.js";
 import { companyAdminRouter } from "./companyAdmin.routes.js";
@@ -25,6 +26,7 @@ apiRouter.use("/projects", projectsRouter);
 apiRouter.use("/chat", chatRouter);
 apiRouter.use("/groups", groupsRouter);
 apiRouter.use("/notifications", notificationsRouter);
+apiRouter.use("/users", usersRouter);
 apiRouter.use("/company", companyRouter);
 apiRouter.use("/company-admin", companyAdminRouter);
 apiRouter.use("/communication", communicationRouter);

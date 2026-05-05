@@ -2,12 +2,6 @@ import React from 'react';
 import { ArrowRight, Building2 } from 'lucide-react';
 
 export default function Step1_Details({ formData, setFormData, onNext }) {
-  const serviceTypes = [
-    "Solar Installation",
-    "Electrical Services",
-    "CCTV Installation"
-  ];
-
   const canContinue = formData.name && formData.service_type && formData.description && formData.years_of_experience;
 
   return (
@@ -31,16 +25,13 @@ export default function Step1_Details({ formData, setFormData, onNext }) {
 
         <div className="form-group">
           <label className="form-label">Service Type</label>
-          <select 
-            className="form-select"
+          <input 
+            type="text" 
+            className="form-input" 
+            placeholder="e.g. Solar Installation, Electrical Services, CCTV Installation"
             value={formData.service_type || ''}
             onChange={(e) => setFormData({...formData, service_type: e.target.value})}
-          >
-            <option value="">Select a service</option>
-            {serviceTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="form-group">

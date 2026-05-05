@@ -1,28 +1,61 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Lock, Mail, User, UserPlus } from "lucide-react";
+import { ArrowRight, Lock, Mail, MapPin, Phone, User, UserPlus } from "lucide-react";
 import apiClient from "../services/apiClient";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function VendorRegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const validateField = (field, value) => {
+    if (field === "name") return value.trim().length >= 2 ? "" : "Name must be at least 2 characters";
+    if (field === "email") return /^\S+@\S+\.\S+$/.test(value.trim()) ? "" : "Enter a valid email address";
+    if (field === "mobile") return /^\d{10}$/.test(value) ? "" : "Mobile number must be exactly 10 digits";
+    if (field === "address") return value.trim().length >= 10 ? "" : "Address must be at least 10 characters";
+    if (field === "password") return /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/.test(value)
+      ? ""
+      : "Password must be at least 8 characters, with 1 uppercase letter and 1 number";
+    return "";
+  };
+
+  const validateForm = () => {
+    const nextErrors = {
+      name: validateField("name", name),
+      email: validateField("email", email),
+      mobile: validateField("mobile", mobile),
+      address: validateField("address", address),
+      password: validateField("password", password)
+    };
+    const filtered = Object.fromEntries(Object.entries(nextErrors).filter(([, message]) => message));
+    setFieldErrors(filtered);
+    return Object.keys(filtered).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
       // Role is automatically set as "vendor"
-      const res = await apiClient.post("/auth/signup", { 
+      const res = await apiClient.post("/auth/register", { 
         name, 
         email, 
         password, 
+        mobile,
+        address,
         role: "vendor" 
       });
       
@@ -32,7 +65,12 @@ export default function VendorRegisterPage() {
       login(payload);
       navigate("/onboarding", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Try another email.");
+      const details = err.response?.data?.details;
+      setError(
+        Array.isArray(details) && details.length > 0
+          ? details.map((d) => d.msg).join(" · ")
+          : err.response?.data?.message || "Registration failed. Try another email."
+      );
     } finally {
       setLoading(false);
     }
@@ -59,10 +97,15 @@ export default function VendorRegisterPage() {
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E5E7EB] rounded-xl focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all"
                 placeholder="John Doe"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setName(nextValue);
+                  setFieldErrors((prev) => ({ ...prev, name: validateField("name", nextValue) }));
+                }}
                 required
               />
             </div>
+            {fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}
           </div>
 
           <div>
@@ -74,10 +117,57 @@ export default function VendorRegisterPage() {
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E5E7EB] rounded-xl focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all"
                 placeholder="company@email.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setEmail(nextValue);
+                  setFieldErrors((prev) => ({ ...prev, email: validateField("email", nextValue) }));
+                }}
                 required
               />
             </div>
+            {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#374151] mb-1.5">Mobile Number</label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" size={18} />
+              <input
+                type="tel"
+                inputMode="numeric"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E5E7EB] rounded-xl focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all"
+                placeholder="9876543210"
+                value={mobile}
+                onChange={(e) => {
+                  const nextValue = e.target.value.replace(/\D/g, "").slice(0, 10);
+                  setMobile(nextValue);
+                  setFieldErrors((prev) => ({ ...prev, mobile: validateField("mobile", nextValue) }));
+                }}
+                required
+                maxLength={10}
+              />
+            </div>
+            {fieldErrors.mobile && <p className="mt-1 text-xs text-red-600">{fieldErrors.mobile}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#374151] mb-1.5">Address</label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-4 text-[#9CA3AF]" size={18} />
+              <textarea
+                className="w-full min-h-[104px] pl-10 pr-4 py-2.5 bg-white border border-[#E5E7EB] rounded-xl focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all resize-y"
+                placeholder="Enter your full address"
+                value={address}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setAddress(nextValue);
+                  setFieldErrors((prev) => ({ ...prev, address: validateField("address", nextValue) }));
+                }}
+                required
+                minLength={10}
+              />
+            </div>
+            {fieldErrors.address && <p className="mt-1 text-xs text-red-600">{fieldErrors.address}</p>}
           </div>
 
           <div>
@@ -89,11 +179,16 @@ export default function VendorRegisterPage() {
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E5E7EB] rounded-xl focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] outline-none transition-all"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setPassword(nextValue);
+                  setFieldErrors((prev) => ({ ...prev, password: validateField("password", nextValue) }));
+                }}
                 required
                 minLength={8}
               />
             </div>
+            {fieldErrors.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>}
           </div>
 
           {error && (

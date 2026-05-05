@@ -64,3 +64,16 @@ export function getAvailableChatRolesForRole(actorRole) {
   roles.delete(actorRole);
   return Array.from(roles);
 }
+
+export function getConversationScopeForRoles(roleA, roleB) {
+  const provided = [roleA, roleB].sort().join(":");
+
+  for (const [scope, roles] of Object.entries(allowedScopes)) {
+    const expected = [...roles].sort().join(":");
+    if (provided === expected) {
+      return scope;
+    }
+  }
+
+  throw new ApiError(403, "Chat scope is not allowed for these roles");
+}

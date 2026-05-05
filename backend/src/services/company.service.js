@@ -46,27 +46,23 @@ export async function loginCompany(payload) {
 }
 
 export async function updateBusinessInfo(userId, payload) {
-  let company = await companyRepo.findCompanyByUserId(userId);
+  const company = await companyRepo.findCompanyById(userId);
   if (!company) {
-    // If no company profile exists, create one (should have been created at signup though)
-    const user = await companyRepo.findCompanyById(userId); // This is wrong, should be from user repo
-    // Actually, let's assume it's created or we create it here
-    await companyRepo.createCompanyProfile({ userId, name: payload.name || 'New Company', email: payload.email });
-    company = await companyRepo.findCompanyByUserId(userId);
+    throw new ApiError(404, "Company profile not found");
   }
   await companyRepo.updateCompanyInfo(company.id, payload);
   return { success: true };
 }
 
 export async function saveDocument(userId, docType, fileUrl, fileName) {
-  const company = await companyRepo.findCompanyByUserId(userId);
+  const company = await companyRepo.findCompanyById(userId);
   if (!company) throw new ApiError(404, "Company profile not found");
   await companyRepo.saveCompanyDocument(company.id, docType, fileUrl, fileName);
   return { success: true };
 }
 
 export async function getCompanyStatus(userId) {
-  const company = await companyRepo.findCompanyByUserId(userId);
+  const company = await companyRepo.findCompanyById(userId);
   if (!company) return { status: 'not_started' };
   
   const documents = await companyRepo.getCompanyDocuments(company.id);

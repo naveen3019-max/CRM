@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, CheckCircle2, Eye, EyeOff, Globe2, Lock, Mail, User, UserPlus, Zap } from "lucide-react";
+import { ArrowRight, Bot, CheckCircle2, Eye, EyeOff, Globe2, Lock, Mail, MapPin, Phone, User, UserPlus, Zap } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import apiClient from "../services/apiClient";
@@ -26,19 +26,66 @@ export default function RegisterPage() {
   const [name, setName]               = useState("");
   const [email, setEmail]             = useState("");
   const [password, setPassword]       = useState("");
+  const [mobile, setMobile]           = useState("");
+  const [address, setAddress]         = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole]               = useState("customer");
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState("");
+  const [fieldErrors, setFieldErrors]  = useState({});
   const { login }                     = useAuth();
   const navigate                      = useNavigate();
 
+  const validateField = (field, value) => {
+    if (field === "name") {
+      return value.trim().length >= 2 ? "" : "Full name must be at least 2 characters";
+    }
+
+    if (field === "email") {
+      return /^\S+@\S+\.\S+$/.test(value.trim()) ? "" : "Enter a valid email address";
+    }
+
+    if (field === "mobile") {
+      return /^\d{10}$/.test(value) ? "" : "Mobile number must be exactly 10 digits";
+    }
+
+    if (field === "address") {
+      return value.trim().length >= 10 ? "" : "Address must be at least 10 characters";
+    }
+
+    if (field === "password") {
+      return /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/.test(value)
+        ? ""
+        : "Password must be at least 8 characters, with 1 uppercase letter and 1 number";
+    }
+
+    return "";
+  };
+
+  const validateForm = () => {
+    const nextErrors = {
+      name: validateField("name", name),
+      email: validateField("email", email),
+      mobile: validateField("mobile", mobile),
+      address: validateField("address", address),
+      password: validateField("password", password)
+    };
+
+    const filtered = Object.fromEntries(Object.entries(nextErrors).filter(([, message]) => message));
+    setFieldErrors(filtered);
+    return Object.keys(filtered).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
-      const res     = await apiClient.post("/auth/signup", { name, email, password, role });
+      const res     = await apiClient.post("/auth/register", { name, email, password, mobile, address, role });
       const payload = res.data.data;
       login(payload);
       if (payload.user.role === "vendor") {
@@ -139,8 +186,11 @@ export default function RegisterPage() {
                     required
                     minLength={2}
                     autoComplete="name"
+                    onBlur={() => setFieldErrors((prev) => ({ ...prev, name: validateField("name", name) }))}
+                    aria-invalid={Boolean(fieldErrors.name)}
                   />
                 </div>
+                {fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}
               </div>
 
               {/* Email */}
@@ -157,8 +207,61 @@ export default function RegisterPage() {
                     placeholder="you@email.com"
                     required
                     autoComplete="email"
+                    onBlur={() => setFieldErrors((prev) => ({ ...prev, email: validateField("email", email) }))}
+                    aria-invalid={Boolean(fieldErrors.email)}
                   />
                 </div>
+                {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
+              </div>
+
+              <div className="vt-field">
+                <label className="vt-label" htmlFor="reg-mobile">Mobile Number</label>
+                <div className="vt-input-shell">
+                  <Phone className="vt-i-icon" size={15} />
+                  <input
+                    id="reg-mobile"
+                    className="vt-inp"
+                    type="tel"
+                    inputMode="numeric"
+                    value={mobile}
+                    onChange={(e) => {
+                      const nextValue = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setMobile(nextValue);
+                      setFieldErrors((prev) => ({ ...prev, mobile: validateField("mobile", nextValue) }));
+                    }}
+                    placeholder="9876543210"
+                    required
+                    maxLength={10}
+                    autoComplete="tel"
+                    onBlur={() => setFieldErrors((prev) => ({ ...prev, mobile: validateField("mobile", mobile) }))}
+                    aria-invalid={Boolean(fieldErrors.mobile)}
+                  />
+                </div>
+                {fieldErrors.mobile && <p className="mt-1 text-xs text-red-600">{fieldErrors.mobile}</p>}
+              </div>
+
+              <div className="vt-field">
+                <label className="vt-label" htmlFor="reg-address">Address</label>
+                <div className="vt-input-shell items-start py-3">
+                  <MapPin className="vt-i-icon mt-1" size={15} />
+                  <textarea
+                    id="reg-address"
+                    className="vt-inp min-h-[96px] resize-y"
+                    value={address}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setAddress(nextValue);
+                      setFieldErrors((prev) => ({ ...prev, address: validateField("address", nextValue) }));
+                    }}
+                    placeholder="Enter your full address"
+                    required
+                    minLength={10}
+                    autoComplete="street-address"
+                    onBlur={() => setFieldErrors((prev) => ({ ...prev, address: validateField("address", address) }))}
+                    aria-invalid={Boolean(fieldErrors.address)}
+                  />
+                </div>
+                {fieldErrors.address && <p className="mt-1 text-xs text-red-600">{fieldErrors.address}</p>}
               </div>
 
               {/* Password */}
@@ -181,11 +284,14 @@ export default function RegisterPage() {
                     pattern="(?=.*[A-Z])(?=.*[0-9]).{8,}"
                     title="Minimum 8 characters, at least one uppercase letter and one number"
                     autoComplete="new-password"
+                    onBlur={() => setFieldErrors((prev) => ({ ...prev, password: validateField("password", password) }))}
+                    aria-invalid={Boolean(fieldErrors.password)}
                   />
                   <button type="button" className="vt-toggle-pw" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}>
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
+                {fieldErrors.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>}
               </div>
 
               {/* Role */}

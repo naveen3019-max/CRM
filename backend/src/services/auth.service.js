@@ -6,6 +6,7 @@ import * as companyRepo from "../repositories/company.repository.js";
 import {
   createUser,
   findUserByEmail,
+  findUserByMobile,
   findUserById,
   findUserWithPasswordById,
   updateUserProfileById,
@@ -20,6 +21,11 @@ export async function signupUser(payload) {
     throw new ApiError(409, "Email already registered");
   }
 
+  const existingMobile = await findUserByMobile(payload.mobile);
+  if (existingMobile) {
+    throw new ApiError(409, "Mobile number already registered");
+  }
+
   const role = Object.values(ROLES).includes(payload.role) ? payload.role : ROLES.CUSTOMER;
   const passwordHash = await bcrypt.hash(payload.password, 10);
 
@@ -27,7 +33,9 @@ export async function signupUser(payload) {
     name: payload.name,
     email: payload.email,
     passwordHash,
-    role
+    role,
+    mobile: payload.mobile,
+    address: payload.address
   });
 
   if (role === ROLES.VENDOR) {
@@ -52,6 +60,8 @@ export async function signupUser(payload) {
         email: payload.email,
         role,
         phone: null,
+        mobile: payload.mobile,
+        address: payload.address,
         companyStatus: "pending"
       }
     };
@@ -71,7 +81,9 @@ export async function signupUser(payload) {
       name: payload.name,
       email: payload.email,
       role,
-      phone: null
+      phone: null,
+      mobile: payload.mobile,
+      address: payload.address
     }
   };
 }
@@ -91,7 +103,11 @@ export async function loginUser(payload) {
     throw new ApiError(403, "Account disabled. Contact administrator");
   }
 
-  const token = signAccessToken(user);
+  const token = signAccessToken({
+    id: user.id,
+    email: user.email,
+    role: user.role
+  });
   let companyStatus;
 
   if (user.role === ROLES.VENDOR) {
@@ -107,6 +123,8 @@ export async function loginUser(payload) {
       email: user.email,
       role: user.role,
       phone: user.phone || null,
+      mobile: user.mobile || null,
+      address: user.address || null,
       ...(user.role === ROLES.VENDOR ? { companyStatus } : {})
     }
   };
@@ -130,6 +148,8 @@ export async function getUserProfile(actorId) {
     email: user.email,
     role: user.role,
     phone: user.phone || null,
+    mobile: user.mobile || null,
+    address: user.address || null,
     createdAt: user.createdAt,
     ...(user.role === ROLES.VENDOR ? { companyStatus } : {})
   };

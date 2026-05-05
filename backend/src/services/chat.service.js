@@ -4,6 +4,7 @@ import {
   getAllowedScopesForRole,
   getAvailableChatRolesForRole,
   getCounterpartRoles,
+  getConversationScopeForRoles,
   validateConversationScope
 } from "../utils/chatPolicy.js";
 import {
@@ -82,6 +83,33 @@ export async function openConversation(actor, payload) {
   }
 
   return conversation;
+}
+
+export async function getOrCreateConversation(actor, targetUserId) {
+  const otherUser = await findUserById(targetUserId);
+  if (!otherUser) {
+    throw new ApiError(404, "Conversation participant not found");
+  }
+
+  const scope = getConversationScopeForRoles(actor.role, otherUser.role);
+  let conversation = await findConversation(scope, actor.id, otherUser.id);
+
+  if (!conversation) {
+    const conversationId = await createConversationRecord(scope, actor.id, otherUser.id);
+    conversation = {
+      id: conversationId,
+      scope,
+      participantLowId: Math.min(actor.id, otherUser.id),
+      participantHighId: Math.max(actor.id, otherUser.id)
+    };
+  }
+
+  return {
+    chatId: conversation.id,
+    conversationId: conversation.id,
+    scope,
+    targetUserId: otherUser.id
+  };
 }
 
 export async function getMessages(actor, conversationId, limit = 50, offset = 0) {

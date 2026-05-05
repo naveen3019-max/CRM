@@ -14,58 +14,46 @@ export default function Step3_Contact({ formData, setFormData, onNext, onBack })
       <div className="space-y-6">
         <div className="form-group">
           <label className="form-label">Phone Number</label>
-          <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" size={16} />
-            <input 
-              type="text" 
-              className="form-input pl-10" 
-              placeholder="+91 00000 00000"
-              value={formData.phone || ''}
-              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-            />
-          </div>
+          <input 
+            type="text" 
+            className="form-input" 
+            placeholder="+91 00000 00000"
+            value={formData.phone || ''}
+            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+          />
         </div>
 
         <div className="form-group">
           <label className="form-label">Alternate Phone (Optional)</label>
-          <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" size={16} />
-            <input 
-              type="text" 
-              className="form-input pl-10" 
-              placeholder="+91 00000 00000"
-              value={formData.alternate_phone || ''}
-              onChange={(e) => setFormData({...formData, alternate_phone: e.target.value})}
-            />
-          </div>
+          <input 
+            type="text" 
+            className="form-input" 
+            placeholder="+91 00000 00000"
+            value={formData.alternate_phone || ''}
+            onChange={(e) => setFormData({...formData, alternate_phone: e.target.value})}
+          />
         </div>
 
         <div className="form-group">
           <label className="form-label">Business Email</label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" size={16} />
-            <input 
-              type="email" 
-              className="form-input pl-10" 
-              placeholder="contact@company.com"
-              value={formData.business_email || ''}
-              onChange={(e) => setFormData({...formData, business_email: e.target.value})}
-            />
-          </div>
+          <input 
+            type="email" 
+            className="form-input" 
+            placeholder="contact@company.com"
+            value={formData.business_email || ''}
+            onChange={(e) => setFormData({...formData, business_email: e.target.value})}
+          />
         </div>
 
         <div className="form-group">
           <label className="form-label">Website (Optional)</label>
-          <div className="relative">
-            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" size={16} />
-            <input 
-              type="url" 
-              className="form-input pl-10" 
-              placeholder="https://www.company.com"
-              value={formData.website || ''}
-              onChange={(e) => setFormData({...formData, website: e.target.value})}
-            />
-          </div>
+          <input 
+            type="url" 
+            className="form-input" 
+            placeholder="https://www.company.com"
+            value={formData.website || ''}
+            onChange={(e) => setFormData({...formData, website: e.target.value})}
+          />
         </div>
 
         <div className="pt-4 flex justify-between items-center">
