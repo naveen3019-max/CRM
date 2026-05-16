@@ -1,5 +1,6 @@
 import { CalendarDays, ClipboardList, Image as ImageIcon, MapPin, Mic, Pin, X } from "lucide-react";
-import { classifyMessage, parseLocationText, parseRequirementItems, parseScheduleText } from "./chatMessageUtils.js";
+import { classifyMessage, parseLocationText, parseRequirementItems, parseScheduleText, getMessageDisplayText } from "./chatMessageUtils.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 function messageTypeIcon(type) {
   if (type === "location") return MapPin;
@@ -18,6 +19,8 @@ export function PinnedMessagesPanel({
   title = "Pinned Messages"
 }) {
   if (!isOpen) return null;
+  const { user } = useAuth();
+  const preferredLang = user?.preferredLanguage || null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-end bg-slate-950/40 p-3 backdrop-blur-sm">
@@ -47,12 +50,12 @@ export function PinnedMessagesPanel({
                 const TypeIcon = messageTypeIcon(classifyMessage(message));
                 const preview =
                   classifyMessage(message) === "location"
-                    ? parseLocationText(message.messageBody)
+                    ? parseLocationText(getMessageDisplayText(message))
                     : classifyMessage(message) === "schedule"
-                    ? parseScheduleText(message.messageBody)
+                    ? parseScheduleText(getMessageDisplayText(message))
                     : classifyMessage(message) === "requirement"
-                    ? parseRequirementItems(message.messageBody)[0]
-                    : String(message.messageBody || "").trim() || "Pinned message";
+                    ? parseRequirementItems(getMessageDisplayText(message))[0]
+                    : String(getMessageDisplayText(message)).trim() || "Pinned message";
 
                 return (
                   <div key={message.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm">

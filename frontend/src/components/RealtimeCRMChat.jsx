@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
   CalendarDays,
@@ -27,8 +28,12 @@ import {
   parseLocationPayload,
   parseScheduleText,
   parseRequirementItems,
-  summarizeMessage
+  parseAssignmentMessage,
+  parseServiceRequestMessage,
+  summarizeMessage,
+  getMessageDisplayText
 } from "./chatMessageUtils.js";
+import { useAuth } from "../context/AuthContext.jsx";
 import apiClient from "../services/apiClient.js";
 import { MessagePinMenu } from "./MessagePinMenu.jsx";
 import { PinnedMessagesPanel } from "./PinnedMessagesPanel.jsx";
@@ -46,17 +51,21 @@ function StatusTick({ status }) {
 }
 
 function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isHighlighted = false, pinnedOverride = null }) {
+  const { t } = useTranslation();
   const messageType = classifyMessage(message);
   const isMine = Boolean(message.isMine || Number(message.senderId) === Number(currentUserId));
   const isPinnedMessage = pinnedOverride !== null ? Boolean(pinnedOverride) : Number(message.pinned) === 1;
-  const parsedLocation = messageType === "location" ? parseLocationPayload(message.messageBody) : null;
+  const displayBody = getMessageDisplayText(message);
+  const parsedLocation = messageType === "location" ? parseLocationPayload(displayBody) : null;
+  const parsedAssignment = messageType === "assignment" ? parseAssignmentMessage(displayBody) : null;
+  const parsedServiceRequest = messageType === "service_request" ? parseServiceRequestMessage(displayBody) : null;
   const [imageUnavailable, setImageUnavailable] = useState(false);
 
   if (messageType === "system") {
     return (
       <div className="my-4 flex justify-center">
         <p className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm">
-          {String(message.messageBody || "System update").replace(/^system:/i, "").trim()}
+          {String(displayBody || t("chat.systemUpdate", "System update")).replace(/^system:/i, "").trim()}
         </p>
       </div>
     );
@@ -79,6 +88,7 @@ function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isH
     <div className={`group mb-3 flex ${wrapperClass} animate-[fadeUp_220ms_ease-out]`}>
       <div className="max-w-[90%] min-w-[140px] sm:max-w-[72%] sm:min-w-[160px]">
         <article
+          style={{ fontFamily: 'Noto Sans, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', wordBreak: 'break-word' }}
           className={`relative overflow-visible rounded-2xl px-3 py-2.5 shadow-sm transition group-hover:shadow-md ${
             isHighlighted ? "ring-2 ring-blue-300 ring-offset-2 ring-offset-slate-50" : ""
           } ${shellClass}`}
@@ -90,7 +100,7 @@ function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isH
               }`}
             >
               <Pin className="h-3 w-3" aria-hidden="true" />
-              <span>Pinned</span>
+              <span>{t("chat.pinned")}</span>
             </div>
           ) : null}
 
@@ -123,19 +133,19 @@ function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isH
                     <div className={`rounded-full px-3 py-1 text-[11px] font-semibold shadow-sm ${isMine ? "bg-white/25 text-white" : "bg-white text-slate-700"}`}>
                       {parsedLocation?.hasCoordinates
                         ? `${parsedLocation.latitude.toFixed(5)}, ${parsedLocation.longitude.toFixed(5)}`
-                        : "Open location in map"}
+                        : t("chat.openLocationInMap", "Open location in map")}
                     </div>
                   </div>
 
                   <div className="absolute bottom-2 right-2 rounded-full bg-black/20 px-2 py-0.5 text-[10px] font-semibold text-white opacity-90 transition group-hover/map:bg-black/30">
-                    Tap to open
+                    {t("chat.tapToOpen", "Tap to open")}
                   </div>
                 </div>
               </a>
               <div className="flex items-start gap-2">
                 <MapPin className={`mt-0.5 h-4 w-4 ${isMine ? "text-blue-100" : "text-slate-500"}`} />
                 <div className="min-w-0">
-                  <p className={`text-sm ${isMine ? "text-white" : "text-slate-700"}`}>{parsedLocation?.label || parseLocationText(message.messageBody)}</p>
+                  <p className={`text-sm ${isMine ? "text-white" : "text-slate-700"}`}>{parsedLocation?.label || parseLocationText(displayBody)}</p>
                   {parsedLocation?.hasCoordinates ? (
                     <p className={`mt-0.5 text-[11px] ${isMine ? "text-blue-100" : "text-slate-500"}`}>
                       {parsedLocation.latitude.toFixed(5)}, {parsedLocation.longitude.toFixed(5)}
@@ -144,14 +154,14 @@ function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isH
                 </div>
               </div>
               <a
-                href={parsedLocation?.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parseLocationText(message.messageBody))}`}
+                href={parsedLocation?.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parseLocationText(displayBody))}`}
                 target="_blank"
                 rel="noreferrer"
                 className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold ${
                   isMine ? "bg-white/20 text-white hover:bg-white/30" : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
               >
-                Open in Maps
+                {t("chat.openInMaps", "Open in Maps")}
               </a>
             </div>
           ) : null}
@@ -159,7 +169,7 @@ function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isH
           {messageType === "schedule" ? (
             <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-slate-800">
               <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Visit Scheduled</p>
-              <p className="mt-1 text-sm font-semibold">{parseScheduleText(message.messageBody)}</p>
+              <p className="mt-1 text-sm font-semibold">{parseScheduleText(displayBody)}</p>
             </div>
           ) : null}
 
@@ -167,10 +177,153 @@ function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isH
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-slate-800">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Requirement Summary</p>
               <ul className="mt-2 list-disc space-y-1 pl-4 text-sm">
-                {parseRequirementItems(message.messageBody).map((item) => (
+                {parseRequirementItems(displayBody).map((item) => (
                   <li key={`${message.id}-${item.slice(0, 20)}`}>{item}</li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+
+          {messageType === "assignment" && parsedAssignment ? (
+            <div className={`overflow-hidden rounded-2xl border ${isMine ? "border-white/20 bg-white/10" : "border-slate-200 bg-white"}`}>
+              <div className={`flex items-center justify-between border-b px-3 py-2 ${isMine ? "border-white/10" : "border-slate-200"}`}>
+                <div>
+                  <p className={`text-[11px] font-semibold uppercase tracking-[0.2em] ${isMine ? "text-blue-100" : "text-slate-500"}`}>
+                    {parsedAssignment.kind === "status" ? "Status Update" : "Work Assignment"}
+                  </p>
+                  <p className={`mt-0.5 text-sm font-semibold ${isMine ? "text-white" : "text-slate-900"}`}>
+                    {parsedAssignment.service || "Assignment details"}
+                  </p>
+                </div>
+                <ClipboardList className={`h-5 w-5 ${isMine ? "text-blue-100" : "text-slate-500"}`} aria-hidden="true" />
+              </div>
+
+              <div className="grid gap-2 px-3 py-3 sm:grid-cols-2">
+                {parsedAssignment.customer ? (
+                  <div>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${isMine ? "text-blue-100" : "text-slate-500"}`}>Customer</p>
+                    <p className={`text-sm ${isMine ? "text-white" : "text-slate-800"}`}>{parsedAssignment.customer}</p>
+                  </div>
+                ) : null}
+
+                {parsedAssignment.location ? (
+                  <div>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${isMine ? "text-blue-100" : "text-slate-500"}`}>Location</p>
+                    <p className={`text-sm ${isMine ? "text-white" : "text-slate-800"}`}>{parsedAssignment.location}</p>
+                  </div>
+                ) : null}
+
+                {parsedAssignment.schedule ? (
+                  <div>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${isMine ? "text-blue-100" : "text-slate-500"}`}>Preferred Schedule</p>
+                    <p className={`text-sm ${isMine ? "text-white" : "text-slate-800"}`}>{parsedAssignment.schedule}</p>
+                  </div>
+                ) : null}
+
+                {parsedAssignment.priority ? (
+                  <div>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${isMine ? "text-blue-100" : "text-slate-500"}`}>Priority</p>
+                    <p className={`text-sm ${isMine ? "text-white" : "text-slate-800"}`}>{parsedAssignment.priority}</p>
+                  </div>
+                ) : null}
+              </div>
+
+              {parsedAssignment.details ? (
+                <div className={`px-3 pb-3 ${isMine ? "text-blue-50" : "text-slate-700"}`}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-current opacity-70">Details</p>
+                  <p className="mt-1 text-sm leading-6 whitespace-pre-wrap break-words">{parsedAssignment.details}</p>
+                </div>
+              ) : null}
+
+              {parsedAssignment.instructions ? (
+                <div className={`border-t px-3 py-2 text-xs ${isMine ? "border-white/10 text-blue-50" : "border-slate-200 text-slate-600"}`}>
+                  {parsedAssignment.instructions}
+                </div>
+              ) : null}
+
+              {parsedAssignment.action ? (
+                <div className={`border-t px-3 py-2 text-xs font-medium ${isMine ? "border-white/10 text-blue-50/90" : "border-slate-200 text-slate-500"}`}>
+                  {parsedAssignment.action}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {messageType === "service_request" && parsedServiceRequest ? (
+            <div className={`overflow-hidden rounded-2xl border ${isMine ? "border-white/20 bg-white/10" : "border-slate-200 bg-white"}`}>
+              <div className={`flex items-center justify-between border-b px-3 py-2 ${isMine ? "border-white/10" : "border-slate-200"}`}>
+                <div>
+                  <p className={`text-[11px] font-semibold uppercase tracking-[0.2em] ${isMine ? "text-blue-100" : "text-slate-500"}`}>
+                    New Service Request
+                  </p>
+                  <p className={`mt-0.5 text-sm font-semibold ${isMine ? "text-white" : "text-slate-900"}`}>
+                    {parsedServiceRequest.service || "Request details"}
+                  </p>
+                </div>
+                <ClipboardList className={`h-5 w-5 ${isMine ? "text-blue-100" : "text-slate-500"}`} aria-hidden="true" />
+              </div>
+
+              <div className="grid gap-2 px-3 py-3 sm:grid-cols-2">
+                {parsedServiceRequest.requestId ? (
+                  <div>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${isMine ? "text-blue-100" : "text-slate-500"}`}>Request ID</p>
+                    <p className={`text-sm ${isMine ? "text-white" : "text-slate-800"}`}>{parsedServiceRequest.requestId}</p>
+                  </div>
+                ) : null}
+
+                {parsedServiceRequest.customer ? (
+                  <div>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${isMine ? "text-blue-100" : "text-slate-500"}`}>Customer</p>
+                    <p className={`text-sm ${isMine ? "text-white" : "text-slate-800"}`}>{parsedServiceRequest.customer}</p>
+                  </div>
+                ) : null}
+
+                {parsedServiceRequest.location ? (
+                  <div>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${isMine ? "text-blue-100" : "text-slate-500"}`}>Location</p>
+                    <p className={`text-sm ${isMine ? "text-white" : "text-slate-800"}`}>{parsedServiceRequest.location}</p>
+                  </div>
+                ) : null}
+
+                {parsedServiceRequest.priority ? (
+                  <div>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${isMine ? "text-blue-100" : "text-slate-500"}`}>Priority</p>
+                    <p className={`text-sm ${isMine ? "text-white" : "text-slate-800"}`}>{parsedServiceRequest.priority}</p>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className={`px-3 pb-3 ${isMine ? "text-blue-50" : "text-slate-700"}`}>
+                {parsedServiceRequest.problem ? (
+                  <div className="mb-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-current opacity-70">Problem</p>
+                    <p className="mt-1 text-sm leading-6 whitespace-pre-wrap break-words">{parsedServiceRequest.problem}</p>
+                  </div>
+                ) : null}
+
+                {parsedServiceRequest.expectedSolution ? (
+                  <div className="mb-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-current opacity-70">Expected Solution</p>
+                    <p className="mt-1 text-sm leading-6 whitespace-pre-wrap break-words">{parsedServiceRequest.expectedSolution}</p>
+                  </div>
+                ) : null}
+
+                {parsedServiceRequest.requirementDetails ? (
+                  <div className="mb-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-current opacity-70">Requirement Details</p>
+                    <p className="mt-1 text-sm leading-6 whitespace-pre-wrap break-words">{parsedServiceRequest.requirementDetails}</p>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className={`grid gap-2 border-t px-3 py-2 text-xs ${isMine ? "border-white/10 text-blue-50/90" : "border-slate-200 text-slate-500"}`}>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {parsedServiceRequest.schedule ? <span><strong>Schedule:</strong> {parsedServiceRequest.schedule}</span> : null}
+                  {parsedServiceRequest.budget ? <span><strong>Budget:</strong> {parsedServiceRequest.budget}</span> : null}
+                  {parsedServiceRequest.attachments ? <span><strong>Attachments:</strong> {parsedServiceRequest.attachments}</span> : null}
+                </div>
+                {parsedServiceRequest.action ? <div className="font-medium">{parsedServiceRequest.action}</div> : null}
+              </div>
             </div>
           ) : null}
 
@@ -178,7 +331,7 @@ function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isH
             <button type="button" className="block w-full cursor-zoom-in p-1" title="Attachment preview">
               {imageUnavailable ? (
                 <div className={`flex h-40 items-center justify-center rounded-xl text-sm font-medium ${isMine ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
-                  Attachment preview unavailable
+                  {t("chat.attachmentPreviewUnavailable")}
                 </div>
               ) : (
                 <img
@@ -193,16 +346,23 @@ function MessageCard({ message, currentUserId, onPinMessage, onUnpinMessage, isH
 
           {messageType === "audio" ? (
             <div className="rounded-xl border border-black/10 bg-white/20 p-2">
-              <p className={`mb-2 text-xs font-semibold ${isMine ? "text-blue-100" : "text-slate-700"}`}>Voice message</p>
+              <p className={`mb-2 text-xs font-semibold ${isMine ? "text-blue-100" : "text-slate-700"}`}>{t("chat.voiceMessage")}</p>
               <audio controls preload="metadata" src={audioSource} className="w-full" />
-            </div>
+              {/* captions only: do not show raw message body for audio unless explicitly flagged */}
+              {((message.caption === true) || message.hasCaption) && displayBody ? (
+                <p className={`mt-2 whitespace-pre-wrap break-words text-sm ${isMine ? "text-white" : "text-gray-900"}`}>
+                  {displayBody}
+                </p>
+              ) : null}
+              </div>
           ) : null}
 
-          {(messageType === "text" || messageType === "audio") && message.messageBody ? (
+          {messageType === "text" && displayBody ? (
             <p className={`whitespace-pre-wrap break-words text-sm ${isMine ? "text-white" : "text-gray-900"}`}>
-              {message.messageBody}
+              {displayBody}
             </p>
           ) : null}
+
         </article>
 
         <div className={`mt-1 flex items-center gap-1.5 text-[11px] ${metaClass}`}>
@@ -241,6 +401,7 @@ export function RealtimeCRMChat({
   pinnedRefreshKey = 0,
   onMessagePinStateChanged
 }) {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [selectedAttachment, setSelectedAttachment] = useState(null);
@@ -484,7 +645,7 @@ export function RealtimeCRMChat({
       };
 
       recorder.onerror = () => {
-        setAttachmentError("Unable to capture voice message.");
+        setAttachmentError(t("chat.unableToCaptureVoiceMessage"));
       };
 
       recorder.onstop = () => {
@@ -525,7 +686,7 @@ export function RealtimeCRMChat({
 
       mediaRecorderRef.current = null;
       setIsRecording(false);
-      setAttachmentError("Microphone permission is required for voice messages.");
+      setAttachmentError(t("chat.microphonePermissionRequired"));
     }
   };
 
@@ -948,7 +1109,7 @@ export function RealtimeCRMChat({
 
           {attachmentError ? <p className="mb-2 text-xs text-rose-500">{attachmentError}</p> : null}
 
-          {isRecording ? <p className="mb-2 text-xs font-semibold text-rose-600">Recording voice message...</p> : null}
+          {isRecording ? <p className="mb-2 text-xs font-semibold text-rose-600">{t("chat.recordingVoiceMessage")}</p> : null}
 
           {locationPickerOpen ? (
             <div className="mb-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
@@ -1098,7 +1259,7 @@ export function RealtimeCRMChat({
                     ? "bg-rose-50 text-rose-600 hover:bg-rose-100"
                     : "text-slate-500 hover:bg-gray-100 hover:text-slate-700"
                 }`}
-                title={isRecording ? "Stop recording" : "Record voice message"}
+                title={isRecording ? t("chat.stopRecording") : t("chat.recordVoiceMessage")}
               >
                 {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </button>
@@ -1164,7 +1325,7 @@ export function RealtimeCRMChat({
                     ? "bg-rose-50 text-rose-600 hover:bg-rose-100"
                     : "text-slate-500 hover:bg-gray-100 hover:text-slate-700"
                 }`}
-                title={isRecording ? "Stop recording" : "Record voice message"}
+                title={isRecording ? t("chat.stopRecording") : t("chat.recordVoiceMessage")}
               >
                 {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </button>

@@ -1,7 +1,8 @@
 import { ApiError } from "../utils/ApiError.js";
 import {
   listNotificationsForUser,
-  markNotificationReadById
+  markNotificationReadById,
+  createNotificationForAllAdmins
 } from "../repositories/notification.repository.js";
 
 export async function getNotifications(userId) {
@@ -14,4 +15,18 @@ export async function markRead(notificationId, userId) {
     throw new ApiError(404, "Notification not found");
   }
   return { success: true };
+}
+
+export async function createVendorVerificationNotification(vendorId, companyName) {
+  // Notify all admins of pending vendor verification
+  const notificationIds = await createNotificationForAllAdmins(
+    `New vendor verification pending: ${companyName}`,
+    {
+      type: 'vendor_verification',
+      vendorId,
+      companyName,
+      action: 'verify'
+    }
+  );
+  return notificationIds;
 }

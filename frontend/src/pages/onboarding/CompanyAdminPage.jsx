@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Eye, Check, X, FileText, Download, Loader2, ArrowLeft, Building, MapPin, Phone, Mail, MessageSquare } from 'lucide-react';
 import { companyApi } from '../../services/companyApi';
+import DocumentPreviewModal from '../../components/DocumentPreviewModal';
 import '../../styles/onboarding.css';
 
 export default function CompanyAdminPage() {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCompany, setSelectedCompany] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [rejectReason, setRejectReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -258,14 +260,23 @@ export default function CompanyAdminPage() {
                             <p className="text-[10px] text-[#64748B]">{doc.file_name}</p>
                           </div>
                         </div>
-                        <a 
-                          href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${doc.file_url}`} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className="p-2 text-[#64748B] hover:text-[#2563EB] hover:bg-[#2563EB]/5 rounded-lg transition-all"
-                        >
-                          <Download size={18} />
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setSelectedDocument(doc)}
+                            className="p-2 text-[#64748B] hover:text-[#2563EB] hover:bg-[#2563EB]/5 rounded-lg transition-all"
+                            title="Preview document"
+                          >
+                            <Eye size={18} />
+                          </button>
+                          <a 
+                            href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${doc.file_url}`} 
+                            download
+                            className="p-2 text-[#64748B] hover:text-[#2563EB] hover:bg-[#2563EB]/5 rounded-lg transition-all"
+                            title="Download document"
+                          >
+                            <Download size={18} />
+                          </a>
+                        </div>
                       </div>
                     ))}
                     {(!selectedCompany.documents || selectedCompany.documents.length === 0) && (
@@ -317,6 +328,15 @@ export default function CompanyAdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Document Preview Modal */}
+      {selectedDocument && (
+        <DocumentPreviewModal
+          document={selectedDocument}
+          onClose={() => setSelectedDocument(null)}
+          apiBaseUrl={import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}
+        />
       )}
     </div>
   );

@@ -1,5 +1,16 @@
 import { ApiError } from "../utils/ApiError.js";
 
+const dbUnavailableCodes = new Set([
+  "PROTOCOL_CONNECTION_LOST",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "ER_CON_COUNT_ERROR",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "HANDSHAKE_SSL_ERROR"
+]);
+
 export function notFoundMiddleware(req, res) {
   res.status(404).json({
     success: false,
@@ -48,6 +59,13 @@ export function errorMiddleware(err, req, res, next) {
     return res.status(400).json({
       success: false,
       message: err.message || "File upload failed"
+    });
+  }
+
+  if (dbUnavailableCodes.has(err?.code)) {
+    return res.status(503).json({
+      success: false,
+      message: "Database is temporarily unavailable. Please try again shortly."
     });
   }
 

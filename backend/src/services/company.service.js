@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { ApiError } from "../utils/ApiError.js";
 import { signAccessToken } from "../utils/jwt.js";
 import * as companyRepo from "../repositories/company.repository.js";
+import { createVendorVerificationNotification } from "./notifications.service.js";
 
 export async function registerCompany(payload) {
   const existing = await companyRepo.findCompanyByEmail(payload.email);
@@ -46,23 +47,36 @@ export async function loginCompany(payload) {
 }
 
 export async function updateBusinessInfo(userId, payload) {
-  const company = await companyRepo.findCompanyById(userId);
+  const company = await companyRepo.findCompanyByUserId(userId);
   if (!company) {
     throw new ApiError(404, "Company profile not found");
   }
+  
+  const wasNotPending = company.status !== 'pending';
   await companyRepo.updateCompanyInfo(company.id, payload);
+  
+  // If this is the first submission (moving from null/rejected to pending), create notification
+  if (wasNotPending && company.user_id) {
+    try {
+      await createVendorVerificationNotification(company.user_id, company.name);
+    } catch (err) {
+      console.warn("Failed to create vendor verification notification:", err.message);
+      // Don't fail the update if notification fails
+    }
+  }
+  
   return { success: true };
 }
 
 export async function saveDocument(userId, docType, fileUrl, fileName) {
-  const company = await companyRepo.findCompanyById(userId);
+  const company = await companyRepo.findCompanyByUserId(userId);
   if (!company) throw new ApiError(404, "Company profile not found");
   await companyRepo.saveCompanyDocument(company.id, docType, fileUrl, fileName);
   return { success: true };
 }
 
 export async function getCompanyStatus(userId) {
-  const company = await companyRepo.findCompanyById(userId);
+  const company = await companyRepo.findCompanyByUserId(userId);
   if (!company) return { status: 'not_started' };
   
   const documents = await companyRepo.getCompanyDocuments(company.id);

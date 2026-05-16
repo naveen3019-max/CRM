@@ -1,10 +1,15 @@
 import React from 'react';
 import { 
   MapPin, Calendar, ClipboardList, CheckCircle, ExternalLink, 
-  Download, Clock, Check, Checks, AlertCircle, User 
+  Download, Clock, Check, AlertCircle, User 
 } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext.jsx';
+import { getMessageDisplayText } from '../../../components/chatMessageUtils.js';
 
 export default function TimelinePanel({ messages, scrollRef, currentUserId }) {
+  const { user } = useAuth();
+  const preferredLang = user?.preferredLanguage || null;
+
   const groupMessagesByDay = (msgs) => {
     const groups = {};
     const today = new Date().toLocaleDateString();
@@ -27,12 +32,13 @@ export default function TimelinePanel({ messages, scrollRef, currentUserId }) {
 
   const renderMessage = (msg, isOwn) => {
     const metadata = typeof msg.metadata_json === 'string' ? JSON.parse(msg.metadata_json) : (msg.metadata_json || {});
+    const displayText = getMessageDisplayText(msg, preferredLang);
     
     // 1. SYSTEM MESSAGES (Center)
     if (msg.type === 'system_event') {
       return (
         <div key={msg.id} className="system-msg my-4">
-          {msg.messageBody}
+          {displayText}
         </div>
       );
     }
@@ -49,7 +55,7 @@ export default function TimelinePanel({ messages, scrollRef, currentUserId }) {
                  {msg.type === 'task' && <><CheckCircle size={14} /> Operation Task</>}
               </div>
               <div className="card-content">
-                 {renderCardBody(msg, metadata)}
+                  {renderCardBody(msg, metadata, displayText)}
               </div>
            </div>
            <div className="msg-timestamp px-1">
@@ -63,7 +69,7 @@ export default function TimelinePanel({ messages, scrollRef, currentUserId }) {
     return (
       <div key={msg.id} className={`bubble-row ${isOwn ? 'own' : 'other'} mb-4`}>
         <div className={`msg-bubble ${isOwn ? 'bubble-own' : 'bubble-other'}`}>
-          <div className="msg-text">{msg.messageBody}</div>
+          <div className="msg-text">{displayText}</div>
         </div>
         <div className="msg-timestamp px-1">
           {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -73,13 +79,13 @@ export default function TimelinePanel({ messages, scrollRef, currentUserId }) {
     );
   };
 
-  const renderCardBody = (msg, metadata) => {
+  const renderCardBody = (msg, metadata, displayText) => {
     switch(msg.type) {
       case 'location':
         return (
           <div className="space-y-3">
             <div className="aspect-[16/9] bg-slate-100 rounded-lg bg-[url('https://api.mapbox.com/styles/v1/mapbox/light-v10/static/pin-s+2563EB(-122.4194,37.7749)/-122.4194,37.7749,14,0/320x180?access_token=pk.mock')] bg-cover bg-center"></div>
-            <div className="text-sm font-semibold text-slate-800">{metadata.address || msg.messageBody}</div>
+            <div className="text-sm font-semibold text-slate-800">{metadata.address || displayText}</div>
             <button className="w-full py-2 bg-blue-600 text-white text-[11px] font-bold uppercase tracking-wider rounded-lg hover:bg-blue-700 transition-colors">
               Open in Maps
             </button>
@@ -90,7 +96,7 @@ export default function TimelinePanel({ messages, scrollRef, currentUserId }) {
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 flex items-center justify-between">
             <div>
               <div className="text-[10px] font-bold text-amber-600 uppercase">Appointment</div>
-              <div className="text-sm font-bold text-slate-900">{metadata.time || msg.messageBody}</div>
+              <div className="text-sm font-bold text-slate-900">{metadata.time || displayText}</div>
             </div>
             <Clock className="text-amber-500" size={20} />
           </div>
@@ -98,11 +104,11 @@ export default function TimelinePanel({ messages, scrollRef, currentUserId }) {
       case 'requirement':
         return (
           <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-            {msg.messageBody}
+            {displayText}
           </div>
         );
       default:
-        return <div className="text-sm text-slate-700">{msg.messageBody}</div>;
+        return <div className="text-sm text-slate-700">{displayText}</div>;
     }
   };
 

@@ -90,7 +90,7 @@ export async function removeGroupMember(groupId, userId) {
 // Get group members with user details
 export async function getGroupMembers(groupId) {
   const [rows] = await pool.query(
-    `SELECT u.id, u.name, u.email, u.role, gm.role as memberRole, gm.joined_at
+    `SELECT u.id, u.name, u.email, u.role, u.preferred_language AS preferredLanguage, gm.role as memberRole, gm.joined_at
      FROM group_members gm
      INNER JOIN users u ON u.id = gm.user_id
      WHERE gm.group_id = ?
@@ -132,28 +132,65 @@ export async function deleteGroup(groupId) {
 
 // Send group message
 export async function createGroupMessage(groupId, senderId, messageBody, imageUrl = null) {
-  const [result] = await pool.query(
-    `INSERT INTO messages (group_id, sender_id, message_body, image_url, is_group_message)
-     VALUES (?, ?, ?, ?, 1)`,
-    [groupId, senderId, messageBody || null, imageUrl || null]
-  );
+  const originalMessage = messageBody || null;
+  const translatedMessages = JSON.stringify({});
+
+  const query = `INSERT INTO messages (group_id, sender_id, message_body, image_url, is_group_message, original_message, original_language, translated_messages)
+     VALUES (?, ?, ?, ?, 1, ?, ?, ?)`;
+  
+  const fallbackQuery = `INSERT INTO messages (group_id, sender_id, message_body, image_url, is_group_message)
+     VALUES (?, ?, ?, ?, 1)`;
+  
+  let result;
+  try {
+    [result] = await pool.query(query,
+      [groupId, senderId, messageBody || null, imageUrl || null, originalMessage, null, translatedMessages]
+    );
+  } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      console.log('[DB] Translation columns not ready, creating group message without translation fields');
+      [result] = await pool.query(fallbackQuery,
+        [groupId, senderId, messageBody || null, imageUrl || null]
+      );
+    } else {
+      throw err;
+    }
+  }
+  
   return result.insertId;
 }
 
 // Get group messages with pagination
 export async function listGroupMessages(groupId, limit = 50, offset = 0) {
-  const [rows] = await pool.query(
-    `SELECT m.id, m.group_id as groupId, m.sender_id as senderId, m.message_body as messageBody, 
-            m.image_url as imageUrl, m.created_at as createdAt,
+  const query = `SELECT m.id, m.group_id as groupId, m.sender_id as senderId, m.message_body as messageBody, 
+            m.image_url as imageUrl, m.original_message AS originalMessage, m.original_language AS originalLanguage, m.translated_messages AS translatedMessages, m.created_at as createdAt,
             u.name as senderName, u.role as senderRole
      FROM messages m
      INNER JOIN users u ON u.id = m.sender_id
      WHERE m.group_id = ? AND m.is_group_message = 1
-     ORDER BY m.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [groupId, limit, offset]
-  );
-  return rows.reverse();
+      ORDER BY m.created_at ASC
+     LIMIT ? OFFSET ?`;
+
+  const fallbackQuery = `SELECT m.id, m.group_id as groupId, m.sender_id as senderId, m.message_body as messageBody, 
+            m.image_url as imageUrl, NULL AS originalMessage, NULL AS originalLanguage, NULL AS translatedMessages, m.created_at as createdAt,
+            u.name as senderName, u.role as senderRole
+     FROM messages m
+     INNER JOIN users u ON u.id = m.sender_id
+     WHERE m.group_id = ? AND m.is_group_message = 1
+      ORDER BY m.created_at ASC
+     LIMIT ? OFFSET ?`;
+
+  try {
+    const [rows] = await pool.query(query, [groupId, limit, offset]);
+    return rows;
+  } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      const [rows] = await pool.query(fallbackQuery, [groupId, limit, offset]);
+      return rows;
+    }
+
+    throw err;
+  }
 }
 
 // Mark group message as read for user

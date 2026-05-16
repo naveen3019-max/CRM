@@ -1,5 +1,6 @@
 import { ArrowRight, Bot, Eye, EyeOff, Globe2, Lock, Mail, Shield, Zap } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import apiClient from "../services/apiClient";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState("");
   const { login }                     = useAuth();
+  const { t } = useTranslation();
   const navigate                      = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -33,7 +35,7 @@ export default function LoginPage() {
         navigate(`/${payload.user.role}`, { replace: true });
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Please check your credentials.");
+      setError(err.response?.data?.message || t("auth.loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -110,21 +112,20 @@ export default function LoginPage() {
         {/* ── RIGHT: Sign-in card ── */}
         <main className="vt-form-col">
           <div className="vt-card vt-fadein" style={{ "--d": "80ms" }}>
-
             <div className="vt-card-top">
               <div className="vt-card-icon-wrap">
                 <Shield size={18} className="vt-card-icon" />
               </div>
               <div>
-                <h2 className="vt-card-title">Sign in</h2>
-                <p className="vt-card-sub">Access your CRM dashboard</p>
+                <h2 className="vt-card-title">{t("auth.signIn")}</h2>
+                <p className="vt-card-sub">{t("auth.accessDashboard")}</p>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="vt-form">
               {/* Email */}
               <div className="vt-field">
-                <label className="vt-label" htmlFor="login-email">Email</label>
+                <label className="vt-label" htmlFor="login-email">{t("auth.email")}</label>
                 <div className="vt-input-shell">
                   <Mail className="vt-i-icon" size={15} />
                   <input
@@ -142,7 +143,7 @@ export default function LoginPage() {
 
               {/* Password */}
               <div className="vt-field">
-                <label className="vt-label" htmlFor="login-password">Password</label>
+                <label className="vt-label" htmlFor="login-password">{t("auth.password")}</label>
                 <div className="vt-input-shell">
                   <Lock className="vt-i-icon" size={15} />
                   <input
@@ -164,14 +165,14 @@ export default function LoginPage() {
               {error && <p className="vt-err">{error}</p>}
 
               <button id="login-submit" type="submit" disabled={loading} className="vt-btn-primary">
-                {loading ? <span className="vt-spin" /> : <><span>Sign In</span><ArrowRight size={15} /></>}
+                {loading ? <span className="vt-spin" /> : <><span>{t("auth.signInAction")}</span><ArrowRight size={15} /></>}
               </button>
             </form>
 
             <div className="vt-card-foot">
               <p className="vt-foot-txt">
-                No account?{" "}
-                <Link to="/register" className="vt-foot-link">Register here</Link>
+                {t("auth.noAccount")}{" "}
+                <Link to="/register" className="vt-foot-link">{t("auth.registerHere")}</Link>
               </p>
               <p className="vt-roles-note">
                 Roles: admin · sales · customer · vendor · electrician · field_work

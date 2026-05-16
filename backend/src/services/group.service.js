@@ -215,17 +215,22 @@ export async function sendGroupMessage(actor, groupId, payload) {
     senderId: actor.id,
     senderName: sender.name,
     message: hasText ? String(message).trim() : null,
+    originalMessage: hasText ? String(message).trim() : null,
+    originalLanguage: null,
+    translatedMessages: {},
     imageUrl: hasImage ? String(imageUrl).trim() : null,
     createdAt: new Date().toISOString()
   };
 
-  // Emit to all members
   for (const member of members) {
-    emitToUser(member.id, "group:message", messagePayload);
+    emitToUser(member.id, "group:message", {
+      ...messagePayload
+    });
+
     emitToUser(member.id, "group:message:received", {
       ...messagePayload,
       timestamp: messagePayload.createdAt,
-      message: messagePayload.message
+      message: message
     });
   }
 
@@ -239,7 +244,13 @@ export async function getGroupMessageHistory(actor, groupId, limit = 50, offset 
     throw new ApiError(403, "You are not a member of this group");
   }
 
-  return listGroupMessages(groupId, limit, offset);
+  const messages = await listGroupMessages(groupId, limit, offset);
+  return messages.map((message) => ({
+    ...message,
+    originalMessage: message.originalMessage || message.messageBody || message.message || message.text || "",
+    originalLanguage: null,
+    translatedMessages: {}
+  }));
 }
 
 export async function getPinnedGroupMessages(actor, groupId) {

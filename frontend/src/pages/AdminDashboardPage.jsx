@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { MessageSquare, ShieldCheck, Activity, Users, Zap, CheckCircle2, AlertTriangle, ArrowRight, TrendingUp } from "lucide-react";
 import { DashboardCard } from "../components/DashboardCard.jsx";
+import ServiceRequestsPanel from "../components/ServiceRequestsPanel.jsx";
 import ActivityFeed from "../components/dashboard/ActivityFeed.jsx";
 import apiClient, { withAuth } from "../services/apiClient";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function AdminDashboardPage() {
   const { token, user } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [overview, setOverview] = useState({ totalUsers: 0, totalLeads: 0, activeProjects: 0, revenue: 0 });
   const [health, setHealth] = useState({ pendingTasks: 0, activeUsers: 0, systemStatus: "..." });
@@ -61,40 +64,42 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <section className="space-y-6 pb-12">
+    <section className="space-y-4 pb-8 sm:space-y-6 sm:pb-12">
       {/* KPI Overview */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {loading ? (
           [1, 2, 3, 4].map(i => <div key={i} className="h-32 glass-panel animate-pulse bg-white/50"></div>)
         ) : (
           <>
-            <DashboardCard title="Total Users" value={overview.totalUsers} helper="System-wide accounts" icon={<Users size={20} className="text-blue-500" />} />
-            <DashboardCard title="Leads" value={overview.totalLeads} helper="Pipeline volume" icon={<Zap size={20} className="text-amber-500" />} />
-            <DashboardCard title="Active Projects" value={overview.activeProjects} helper="Currently running" icon={<Activity size={20} className="text-emerald-500" />} />
-            <DashboardCard title="Revenue" value={`$${Number(overview.revenue).toLocaleString()}`} helper="Active + completed" icon={<TrendingUp size={20} className="text-indigo-500" />} />
+            <DashboardCard title={t("adminDashboard.totalUsers")} value={overview.totalUsers} helper={t("adminDashboard.systemWideAccounts")} icon={<Users size={18} className="text-blue-500" />} />
+            <DashboardCard title={t("adminDashboard.leads")} value={overview.totalLeads} helper={t("adminDashboard.pipelineVolume")} icon={<Zap size={18} className="text-amber-500" />} />
+            <DashboardCard title={t("adminDashboard.activeProjects")} value={overview.activeProjects} helper={t("adminDashboard.currentlyRunning")} icon={<Activity size={18} className="text-emerald-500" />} />
+            <DashboardCard title={t("adminDashboard.revenue")} value={`$${Number(overview.revenue).toLocaleString()}`} helper={t("adminDashboard.activeCompleted")} icon={<TrendingUp size={18} className="text-indigo-500" />} />
           </>
         )}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-3 lg:gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid gap-4 lg:grid-cols-3 lg:gap-6">
+        <div className="space-y-4 lg:col-span-2 lg:space-y-6">
+          <ServiceRequestsPanel compact />
+
           {/* User Management Table */}
           <section className="glass-panel relative p-4 sm:p-5">
-            <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="flex items-center gap-2 font-heading text-lg font-bold text-slate-800">
-                <ShieldCheck size={20} className="text-brand-600" />
-                User Management
+            <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="flex items-center gap-2 font-heading text-base font-bold text-slate-800 sm:text-lg">
+                <ShieldCheck size={18} className="text-brand-600 sm:h-5 sm:w-5" />
+                {t("adminDashboard.userManagement")}
               </h2>
               {!loading && selectedUserIds.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-200 sm:gap-3">
                   <span className="text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1 rounded-full border border-brand-100">
-                    {selectedUserIds.length} Selected
+                    {selectedUserIds.length} {t("adminDashboard.selected")}
                   </span>
                   <button 
                     onClick={handleBulkDeactivate}
                     className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg border border-rose-100 transition-all"
                   >
-                    Deactivate
+                    {t("adminDashboard.deactivate")}
                   </button>
                 </div>
               )}
@@ -112,9 +117,9 @@ export default function AdminDashboardPage() {
                 : users.map((u) => (
                     <article key={u.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-bold text-slate-800">{u.name}</p>
-                          <p className="mt-0.5 text-xs text-slate-500">{u.email}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="break-words text-sm font-bold text-slate-800">{u.name}</p>
+                          <p className="mt-0.5 break-words text-xs text-slate-500">{u.email}</p>
                         </div>
                         <input
                           type="checkbox"
@@ -124,13 +129,13 @@ export default function AdminDashboardPage() {
                         />
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between gap-2">
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
                           u.role === 'admin' ? 'bg-indigo-50 text-indigo-600' :
                           u.role === 'vendor' ? 'bg-amber-50 text-amber-600' :
                           'bg-slate-100 text-slate-600'
                         }`}>
-                          {u.role}
+                          {u.role === 'service_professional' ? (u.serviceCategory || u.role) : u.role}
                         </span>
 
                         <span className={`flex items-center gap-1.5 text-xs font-bold ${u.isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
@@ -139,7 +144,20 @@ export default function AdminDashboardPage() {
                         </span>
 
                         <button
-                          onClick={() => navigate(`/admin/chat?role=${u.role}&userId=${u.id}`)}
+                          onClick={async () => {
+                            try {
+                              const res = await apiClient.post('/chat/get-or-create', { targetUserId: u.id }, withAuth(token));
+                              const chatId = res.data?.data?.chatId || res.data?.data?.id;
+                              if (chatId) {
+                                navigate(`/chat/${chatId}`);
+                              } else {
+                                navigate(`/admin/chat?role=${u.role}&userId=${u.id}`);
+                              }
+                            } catch (err) {
+                              console.error('Failed to open chat from dashboard', err);
+                              navigate(`/admin/chat?role=${u.role}&userId=${u.id}`);
+                            }
+                          }}
                           className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:border-brand-100 hover:bg-brand-50 hover:text-brand-600"
                           title="Chat with user"
                         >
@@ -162,10 +180,10 @@ export default function AdminDashboardPage() {
                         onChange={() => setSelectedUserIds(selectedUserIds.length === users.length ? [] : users.map(u => u.id))}
                       />
                     </th>
-                    <th className="py-3 px-2">Name</th>
-                    <th className="py-3 px-2">Role</th>
-                    <th className="py-3 px-2">Status</th>
-                    <th className="py-3 px-2 text-right">Actions</th>
+                    <th className="py-3 px-2">{t("adminDashboard.name")}</th>
+                    <th className="py-3 px-2">{t("adminDashboard.role")}</th>
+                    <th className="py-3 px-2">{t("adminDashboard.status")}</th>
+                    <th className="py-3 px-2 text-right">{t("adminDashboard.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -196,20 +214,33 @@ export default function AdminDashboardPage() {
                           u.role === 'vendor' ? 'bg-amber-50 text-amber-600' :
                           'bg-slate-100 text-slate-600'
                         }`}>
-                          {u.role}
+                          {u.role === 'service_professional' ? (u.serviceCategory || u.role) : u.role}
                         </span>
                       </td>
                       <td className="py-3 px-2">
                         <span className={`flex items-center gap-1.5 text-xs font-bold ${u.isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
                           <div className={`w-1.5 h-1.5 rounded-full ${u.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                          {u.isActive ? "Active" : "Inactive"}
+                          {u.isActive ? t("adminDashboard.active") : t("adminDashboard.inactive")}
                         </span>
                       </td>
                       <td className="py-3 px-2 text-right">
                         <button
-                          onClick={() => navigate(`/admin/chat?role=${u.role}&userId=${u.id}`)}
+                          onClick={async () => {
+                            try {
+                              const res = await apiClient.post('/chat/get-or-create', { targetUserId: u.id }, withAuth(token));
+                              const chatId = res.data?.data?.chatId || res.data?.data?.id;
+                              if (chatId) {
+                                navigate(`/chat/${chatId}`);
+                              } else {
+                                navigate(`/admin/chat?role=${u.role}&userId=${u.id}`);
+                              }
+                            } catch (err) {
+                              console.error('Failed to open chat from dashboard', err);
+                              navigate(`/admin/chat?role=${u.role}&userId=${u.id}`);
+                            }
+                          }}
                           className="p-2 hover:bg-white text-slate-400 hover:text-brand-600 rounded-xl border border-transparent hover:border-brand-100 transition-all shadow-sm hover:shadow-md"
-                          title="Chat with user"
+                          title={t("adminDashboard.chatWithUser")}
                         >
                           <MessageSquare size={16} />
                         </button>
@@ -225,7 +256,7 @@ export default function AdminDashboardPage() {
           <section className="glass-panel p-5">
             <h2 className="font-heading text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
               <TrendingUp size={20} className="text-indigo-600" />
-              Vendor Performance
+              {t("adminDashboard.vendorPerformance")}
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               {performance.map((p, idx) => (
@@ -236,45 +267,51 @@ export default function AdminDashboardPage() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-800">{p.name}</p>
-                      <p className="text-xs text-slate-500">{p.jobsCompleted} Jobs Completed</p>
+                      <p className="text-xs text-slate-500">{p.jobsCompleted} {t("adminDashboard.jobsCompleted")}</p>
                     </div>
                   </div>
                   <div className="text-right text-emerald-600 font-bold">
                     <p className="text-sm">{p.avgCompletionDays > 0 ? `${p.avgCompletionDays.toFixed(1)}d` : 'N/A'}</p>
-                    <p className="text-[10px] uppercase tracking-widest text-slate-400">Avg Time</p>
+                    <p className="text-[10px] uppercase tracking-widest text-slate-400">{t("adminDashboard.avgTime")}</p>
                   </div>
                 </div>
               ))}
               {performance.length === 0 && (
-                <div className="col-span-2 py-8 text-center text-slate-400 italic">No performance data yet</div>
+                <div className="col-span-2 py-8 text-center text-slate-400 italic">{t("adminDashboard.noPerformanceData")}</div>
               )}
             </div>
           </section>
         </div>
 
-        <aside className="space-y-6">
+        <aside className="space-y-4 lg:space-y-6">
           {/* System Health */}
           <section className="glass-panel p-5 bg-gradient-to-br from-white to-slate-50/50">
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
               <Activity size={16} className="text-brand-600" />
-              System Health
+              {t("adminDashboard.systemHealth")}
             </h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100 shadow-sm">
-                <span className="text-xs font-bold text-slate-500 uppercase">Status</span>
+                <span className="text-xs font-bold text-slate-500 uppercase">{t("adminDashboard.status")}</span>
                 <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600">
-                  <CheckCircle2 size={14} /> Healthy
+                  <CheckCircle2 size={14} /> {t("adminDashboard.healthy")}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100 shadow-sm">
-                <span className="text-xs font-bold text-slate-500 uppercase">Pending Tasks</span>
+                <span className="text-xs font-bold text-slate-500 uppercase">{t("adminDashboard.pendingTasks")}</span>
                 <span className={`text-xs font-bold ${health.pendingTasks > 5 ? 'text-amber-600' : 'text-slate-700'}`}>
                   {health.pendingTasks}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100 shadow-sm">
-                <span className="text-xs font-bold text-slate-500 uppercase">Active Users</span>
+                <span className="text-xs font-bold text-slate-500 uppercase">{t("adminDashboard.activeUsers")}</span>
                 <span className="text-xs font-bold text-slate-700">{health.activeUsers}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100 shadow-sm">
+                <span className="text-xs font-bold text-slate-500 uppercase">Pending Verifications</span>
+                <span className={`text-xs font-bold ${health.pendingVendorVerifications > 0 ? 'text-amber-600 bg-amber-50 px-2 py-1 rounded-lg' : 'text-slate-700'}`}>
+                  {health.pendingVendorVerifications}
+                </span>
               </div>
             </div>
           </section>
@@ -287,8 +324,8 @@ export default function AdminDashboardPage() {
             className="w-full group flex items-center justify-between p-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white transition-all shadow-lg shadow-brand-600/30 active:scale-[0.98]"
           >
             <div className="text-left">
-              <p className="text-sm font-bold">Manage Verifications</p>
-              <p className="text-[10px] font-medium text-brand-100 uppercase tracking-widest">Vendor Onboarding</p>
+              <p className="text-sm font-bold">{t("adminDashboard.manageVerifications")}</p>
+              <p className="text-[10px] font-medium text-brand-100 uppercase tracking-widest">{t("adminDashboard.vendorOnboarding")}</p>
             </div>
             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
           </button>

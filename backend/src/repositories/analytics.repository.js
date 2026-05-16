@@ -43,9 +43,11 @@ export async function getSalesMetrics(salesUserId) {
 export async function getSystemHealth() {
   const [[pendingTasks]] = await pool.query("SELECT COUNT(*) AS count FROM tasks WHERE status = 'pending'");
   const [[activeUsers]] = await pool.query("SELECT COUNT(*) AS count FROM users WHERE is_active = 1");
+  const [[pendingVendors]] = await pool.query("SELECT COUNT(*) AS count FROM companies WHERE status = 'pending'");
   return {
     pendingTasks: pendingTasks.count,
     activeUsers: activeUsers.count,
+    pendingVendorVerifications: pendingVendors.count,
     systemStatus: "Healthy"
   };
 }

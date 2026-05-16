@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS users (
   role ENUM('admin', 'sales', 'customer', 'vendor', 'electrician', 'field_work') NOT NULL,
   phone VARCHAR(30) NULL,
   mobile VARCHAR(15) NOT NULL UNIQUE,
-  address TEXT NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

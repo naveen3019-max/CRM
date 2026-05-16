@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardCard } from "../components/DashboardCard.jsx";
 import { LeadKanban } from "../components/LeadKanban.jsx";
+import ServiceRequestsPanel from "../components/ServiceRequestsPanel.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import apiClient, { withAuth } from "../services/apiClient";
 
@@ -54,6 +55,8 @@ export default function SalesDashboardPage() {
         <h2 className="font-heading text-xl font-semibold text-slate-800">Lead Pipeline</h2>
         <LeadKanban leads={leads} />
       </section>
+
+      <ServiceRequestsPanel compact />
     </section>
   );
 }

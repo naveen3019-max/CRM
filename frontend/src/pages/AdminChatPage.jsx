@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import {
   classifyMessage,
   formatRoleLabel,
   parseLocationText,
   parseRequirementItems,
   parseScheduleText,
-  summarizeMessage
+  summarizeMessage,
+  getMessageDisplayText,
+  sortMessagesChronologically
 } from "../components/chatMessageUtils.js";
 import { RealtimeCRMChat } from "../components/RealtimeCRMChat.jsx";
 import { GroupChatPage } from "./GroupChatPage.jsx";
@@ -15,22 +17,37 @@ import { useGroup } from "../context/GroupContext.jsx";
 import apiClient, { withAuth } from "../services/apiClient";
 import { useAuth } from "../context/AuthContext.jsx";
 import { connectChatSocket } from "../services/socketClient.js";
+import { useTranslation } from "react-i18next";
 
-const ADMIN_CHAT_ROLES = ["sales", "vendor", "electrician", "field_work"];
+const ADMIN_CHAT_ROLES = ["customer", "sales", "vendor", "electrician", "field_work", "service_professional"];
+
+const ROLE_BY_SCOPE = {
+  admin_customer: "customer",
+  admin_sales: "sales",
+  admin_vendor: "vendor",
+  admin_electrician: "electrician",
+  admin_field_work: "field_work",
+  admin_service_professional: "service_professional"
+};
 
 export default function AdminChatPage() {
+  const { t } = useTranslation();
   const { token, user } = useAuth();
   const { selectedGroupId } = useGroup();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedRole = searchParams.get("role");
-  const initialRole = requestedRole && ADMIN_CHAT_ROLES.includes(requestedRole) ? requestedRole : "vendor";
+  const stateScope = location.state?.scope;
+  const stateRole = ROLE_BY_SCOPE[stateScope] || null;
+  const initialRole = stateRole || (requestedRole && ADMIN_CHAT_ROLES.includes(requestedRole) ? requestedRole : "vendor");
   const initialUserId = searchParams.get("userId") || "";
+  const initialConversationId = location.state?.targetConversationId || null;
   const [chatMode, setChatMode] = useState("contacts");
 
   const [users, setUsers] = useState([]);
   const [chatRole, setChatRole] = useState(initialRole);
   const [chatUserId, setChatUserId] = useState(initialUserId);
-  const [conversationId, setConversationId] = useState(null);
+  const [conversationId, setConversationId] = useState(initialConversationId);
   const [messages, setMessages] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -45,6 +62,7 @@ export default function AdminChatPage() {
   const socketTypingHandlerRef = useRef(null);
   const socketPresenceSnapshotHandlerRef = useRef(null);
   const socketPresenceUpdateHandlerRef = useRef(null);
+  const initialConversationLoadedRef = useRef(false);
 
   const chatCandidates = useMemo(() => users, [users]);
 
@@ -59,27 +77,40 @@ export default function AdminChatPage() {
   );
 
   const scopeByRole = {
+    customer: "admin_customer",
     sales: "admin_sales",
     vendor: "admin_vendor",
     electrician: "admin_electrician",
-    field_work: "admin_field_work"
+    field_work: "admin_field_work",
+    service_professional: "admin_service_professional"
   };
 
   const roleTabs = [
-    { label: "Sales", value: "sales" },
-    { label: "Vendor", value: "vendor" },
-    { label: "Electrician", value: "electrician" },
-    { label: "Field Work", value: "field_work" }
+    { label: t("chat.customerRole"), value: "customer" },
+    { label: t("chat.salesRole"), value: "sales" },
+    { label: t("chat.vendorRole"), value: "vendor" },
+    { label: t("chat.electricianRole"), value: "electrician" },
+    { label: t("chat.fieldWorkRole"), value: "field_work" },
+    { label: t("chat.serviceProRole"), value: "service_professional" }
   ];
 
   const groupScopeOptions = [
-    { label: "Admin + Sales", value: "admin_sales" },
-    { label: "Admin + Vendors", value: "admin_vendor" },
-    { label: "Admin + Electricians", value: "admin_electrician" },
-    { label: "Admin + Field Work", value: "admin_field_work" }
+    { label: t("chat.adminSalesGroup"), value: "admin_sales" },
+    { label: t("chat.adminVendorsGroup"), value: "admin_vendor" },
+    { label: t("chat.adminElectriciansGroup"), value: "admin_electrician" },
+    { label: t("chat.adminFieldWorkGroup"), value: "admin_field_work" },
+    { label: t("chat.adminServiceProsGroup"), value: "admin_service_professional" }
   ];
 
   const activeScope = scopeByRole[chatRole];
+
+  useEffect(() => {
+    const incomingScope = location.state?.scope;
+    const mappedRole = ROLE_BY_SCOPE[incomingScope];
+    if (mappedRole && mappedRole !== chatRole) {
+      setChatRole(mappedRole);
+    }
+  }, [chatRole, location.state?.scope]);
 
   useEffect(() => {
     setUsers([]);
@@ -184,10 +215,11 @@ export default function AdminChatPage() {
           return;
         }
 
-        const mapped = messagesResponse.data.data.map((message) => ({
-          ...message,
-          isMine: Number(message.senderId) === Number(user.id)
-        }));
+        const mapped = sortMessagesChronologically(messagesResponse.data.data || [])
+          .map((message) => ({
+            ...message,
+            isMine: Number(message.senderId) === Number(user.id)
+          }));
 
         setMessages(mapped);
       } catch (error) {
@@ -264,6 +296,83 @@ export default function AdminChatPage() {
     };
   }, [chatUserId, selectedChatUser]);
 
+  // Handle direct conversation loading from search navigation
+  useEffect(() => {
+    if (!initialConversationId || initialConversationLoadedRef.current || !token) {
+      return;
+    }
+
+    let isDisposed = false;
+    initialConversationLoadedRef.current = true;
+
+    async function loadDirectConversation() {
+      const requestId = ++conversationRequestRef.current;
+      setChatLoading(true);
+      setChatError("");
+
+      try {
+        // Try to fetch messages directly (messages endpoint enforces access)
+        const messagesResponse = await apiClient.get(`/chat/conversations/${initialConversationId}/messages`, withAuth(token));
+
+        if (isDisposed || requestId !== conversationRequestRef.current) {
+          return;
+        }
+
+        const mapped = sortMessagesChronologically(messagesResponse.data.data || [])
+          .map((message) => ({
+            ...message,
+            isMine: Number(message.senderId) === Number(user.id)
+          }));
+
+        setConversationId(initialConversationId);
+        setMessages(mapped);
+
+        // Resolve counterpart user id: prefer conversation list lookup, fallback to messages
+        try {
+          const convListResp = await apiClient.get('/chat/conversations', withAuth(token));
+          const convs = Array.isArray(convListResp.data.data) ? convListResp.data.data : [];
+          const found = convs.find((c) => Number(c.id) === Number(initialConversationId));
+          if (found) {
+            const low = Number(found.participantLowId);
+            const high = Number(found.participantHighId);
+            const counterpartId = low === Number(user.id) ? high : low;
+            setChatUserId(String(counterpartId));
+          } else if (mapped.length) {
+            const first = mapped[0];
+            const counterpartId = Number(first.senderId) === Number(user.id) ? Number(first.receiverId) : Number(first.senderId);
+            setChatUserId(String(counterpartId));
+          }
+        } catch (err) {
+          // ignore; we already have messages
+        }
+      } catch (error) {
+        if (isDisposed || requestId !== conversationRequestRef.current || error?.code === "ERR_CANCELED") {
+          return;
+        }
+
+        setConversationId(null);
+        setMessages([]);
+        setChatError(
+          error?.response?.status === 404
+            ? "Conversation not found."
+            : error?.response?.status === 403
+            ? "You don't have permission to access this conversation."
+            : "Unable to load conversation."
+        );
+      } finally {
+        if (!isDisposed && requestId === conversationRequestRef.current) {
+          setChatLoading(false);
+        }
+      }
+    }
+
+    loadDirectConversation();
+
+    return () => {
+      isDisposed = true;
+    };
+  }, [initialConversationId, token, user.id]);
+
   useEffect(() => {
     if (!token || !conversationId) {
       return;
@@ -326,18 +435,31 @@ export default function AdminChatPage() {
 
       setMessages((prev) => {
         const incomingId = String(incomingMessage.id);
-        if (prev.some((entry) => String(entry.id) === incomingId)) {
-          return prev;
-        }
+        // replace existing message if present, otherwise append
+        let found = false;
+        const next = prev.map((m) => {
+          if (String(m.id) === incomingId) {
+            found = true;
+            return {
+              ...m,
+              ...incomingMessage,
+              id: incomingId,
+              isMine: Number(incomingMessage.senderId) === Number(user.id)
+            };
+          }
+          return m;
+        });
 
-        return [
+        if (found) return next;
+
+        return sortMessagesChronologically([
           ...prev,
           {
             ...incomingMessage,
             id: incomingId,
             isMine: Number(incomingMessage.senderId) === Number(user.id)
           }
-        ];
+        ]);
       });
     };
 
@@ -517,10 +639,12 @@ export default function AdminChatPage() {
           ...candidate,
           lastMessagePreview:
             signal.preview ||
-            (isActive ? "Conversation ready" : `Message ${candidate.name.split(" ")[0]} to coordinate updates`),
+            (isActive
+              ? t("chat.conversationReady")
+              : t("chat.messageContactToCoordinate", { name: candidate.name.split(" ")[0] })),
           lastMessageAt: signal.timestamp || candidate.createdAt,
           unreadCount: signal.unreadCount ?? candidate.unreadCount ?? 0,
-          statusText: presence?.isOnline ? "Active now" : isOnlineNow ? "Active now" : "Last seen recently"
+          statusText: presence?.isOnline ? t("chat.activeNow") : isOnlineNow ? t("chat.activeNow") : t("chat.lastSeenRecently")
         };
       }),
     [chatCandidates, chatUserId, contactSignals, presenceByUser]
@@ -531,21 +655,22 @@ export default function AdminChatPage() {
     const locationMessage = reversedMessages.find((entry) => classifyMessage(entry) === "location");
     const scheduleMessage = reversedMessages.find((entry) => classifyMessage(entry) === "schedule");
     const requirementMessage = reversedMessages.find((entry) => classifyMessage(entry) === "requirement");
+    const preferredLang = user?.preferredLanguage || null;
 
     return {
       location: locationMessage
-        ? parseLocationText(locationMessage.messageBody)
+        ? parseLocationText(getMessageDisplayText(locationMessage, preferredLang))
         : selectedChatUser
-          ? `Project location pending for ${selectedChatUser.name}`
-          : "Location not shared",
+          ? t("chat.projectLocationPending", { name: selectedChatUser.name })
+          : t("chat.locationNotShared"),
       schedule: scheduleMessage
-        ? parseScheduleText(scheduleMessage.messageBody)
-        : "No visit scheduled",
+        ? parseScheduleText(getMessageDisplayText(scheduleMessage, preferredLang))
+        : t("chat.noVisitScheduled"),
       requirement: requirementMessage
-        ? parseRequirementItems(requirementMessage.messageBody)[0]
+        ? parseRequirementItems(getMessageDisplayText(requirementMessage, preferredLang))[0]
         : selectedChatUser
-          ? `Coordinate with ${formatRoleLabel(selectedChatUser.role)}`
-          : "Requirement pending"
+          ? t("chat.coordinateWithRole", { role: formatRoleLabel(selectedChatUser.role) })
+          : t("chat.requirementPending")
     };
   }, [messages, selectedChatUser]);
 
@@ -576,10 +701,8 @@ export default function AdminChatPage() {
             ) : (
               <div className="flex h-full min-h-[420px] items-center justify-center p-8 text-center text-slate-500">
                 <div className="max-w-sm">
-                  <p className="text-base font-semibold text-slate-800">Pick a group</p>
-                  <p className="mt-2 text-sm">
-                    Choose a group from the left panel or create a new one to start the conversation.
-                  </p>
+                  <p className="text-base font-semibold text-slate-800">{t("chat.pickAGroup")}</p>
+                  <p className="mt-2 text-sm">{t("chat.chooseGroupHint")}</p>
                 </div>
               </div>
             )}

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import apiClient, { withAuth } from "../services/apiClient";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function ProfilePage() {
   const { token, user, updateUser } = useAuth();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -35,6 +38,8 @@ export default function ProfilePage() {
 
     loadProfile();
   }, [token]);
+
+  const navigate = useNavigate();
 
   const joinedDate = useMemo(() => {
     if (!profile?.createdAt) {
@@ -98,12 +103,36 @@ export default function ProfilePage() {
   return (
     <section className="space-y-5">
       <header className="glass-panel px-4 py-4 sm:px-5">
-        <h2 className="font-heading text-xl font-semibold text-slate-800">Profile</h2>
-        <p className="text-sm text-slate-500">Manage your personal account details</p>
+        <h2 className="font-heading text-xl font-semibold text-slate-800">{t("profile.title")}</h2>
+        <p className="text-sm text-slate-500">{t("profile.subtitle")}</p>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+        {!loading && profile && !profile.profileCompleted ? (
+          <div className="glass-panel p-4 sm:p-5 col-span-full">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-slate-800">Profile incomplete</p>
+                <p className="text-sm text-slate-600">Please complete your profile to access all features.</p>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/profile-completion")}
+                  className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Complete Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
         <form onSubmit={handleSubmit} className="glass-panel space-y-4 p-4 sm:p-5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+            <p className="text-sm font-semibold text-slate-700">{t("profile.languagePreference")}</p>
+            <p className="mt-1 text-xs text-slate-500">{t("profile.languageHelp")}</p>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <label className="text-sm font-semibold text-slate-600">
               Full Name
@@ -169,12 +198,12 @@ export default function ProfilePage() {
             disabled={loading || saving}
             className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? t("profile.saving") : t("profile.saveChanges")}
           </button>
         </form>
 
         <aside className="glass-panel space-y-3 p-4 sm:p-5">
-          <h3 className="font-heading text-lg font-semibold text-slate-800">Account Info</h3>
+          <h3 className="font-heading text-lg font-semibold text-slate-800">{t("profile.accountInfo")}</h3>
           <div className="space-y-2 text-sm text-slate-600">
             <p>
               <span className="font-semibold text-slate-700">Email:</span> {profile?.email || user?.email}
@@ -184,6 +213,32 @@ export default function ProfilePage() {
             </p>
             <p>
               <span className="font-semibold text-slate-700">Joined:</span> {joinedDate}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-700">State:</span> {profile?.state || "-"}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-700">City:</span> {profile?.city || "-"}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-700">Pincode:</span> {profile?.pincode || "-"}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-700">Experience:</span> {profile?.experience ?? "-"}
+            </p>
+            {profile?.role !== "customer" ? (
+              <p>
+                <span className="font-semibold text-slate-700">About:</span> {profile?.about || "-"}
+              </p>
+            ) : null}
+            <p>
+              <span className="font-semibold text-slate-700">Skills:</span> {profile?.skills || "-"}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-700">Work Type:</span> {profile?.workType || profile?.work_type || "-"}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-700">Profile Completed:</span> {profile?.profileCompleted ? "Yes" : "No"}
             </p>
           </div>
 

@@ -26,29 +26,68 @@ import { createNotificationRecord } from "../repositories/notification.repositor
 import { findUserById, listUsersByRoles } from "../repositories/user.repository.js";
 import { getGroupMembers, isGroupMember, getGroupById } from "../repositories/group.repository.js";
 import { ROLES } from "../utils/constants.js";
+import { isTransientConnectionError } from "../config/db.js";
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withTransientRetry(task, retries = 1) {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await task();
+    } catch (error) {
+      const shouldRetry = attempt < retries && isTransientConnectionError(error);
+      if (!shouldRetry) {
+        throw error;
+      }
+
+      attempt += 1;
+      await wait(200);
+    }
+  }
+}
 
 export async function getConversations(actor) {
   return listConversationsForUser(actor.id);
 }
 
-export async function getTotalUnread(actor) {
-  const allowedScopes = getAllowedScopesForRole(actor.role);
-  
-  if (!allowedScopes.length) {
-    return 0;
+export async function getConversation(actor, conversationId) {
+  const conv = await getConversationById(conversationId);
+  if (!conv) {
+    throw new ApiError(404, "Conversation not found");
   }
 
-  const unreadByScope = await Promise.all(
-    allowedScopes.map(async (scope) => {
-      const roles = getCounterpartRoles(scope, actor.role);
-      const contacts = await listContactsWithUnreadCounts(scope, actor.id, roles, actor.id);
-      const scopeUnread = contacts.reduce((sum, contact) => sum + Number(contact.unreadCount || 0), 0);
-      return scopeUnread;
-    })
-  );
+  const isParticipant =
+    Number(conv.participantLowId) === Number(actor.id) || Number(conv.participantHighId) === Number(actor.id);
 
-  const total = unreadByScope.reduce((sum, count) => sum + count, 0);
-  return total;
+  if (!isParticipant) {
+    throw new ApiError(403, "You do not have access to this conversation");
+  }
+
+  return conv;
+}
+
+export async function getTotalUnread(actor) {
+  return withTransientRetry(async () => {
+    const allowedScopes = getAllowedScopesForRole(actor.role);
+
+    if (!allowedScopes.length) {
+      return 0;
+    }
+
+    const unreadByScope = await Promise.all(
+      allowedScopes.map(async (scope) => {
+        const roles = getCounterpartRoles(scope, actor.role);
+        const contacts = await listContactsWithUnreadCounts(scope, actor.id, roles, actor.id);
+        const scopeUnread = contacts.reduce((sum, contact) => sum + Number(contact.unreadCount || 0), 0);
+        return scopeUnread;
+      })
+    );
+
+    return unreadByScope.reduce((sum, count) => sum + count, 0);
+  });
 }
 
 
@@ -121,7 +160,13 @@ export async function getMessages(actor, conversationId, limit = 50, offset = 0)
   }
 
   await markConversationMessagesRead(conversationId, actor.id);
-  return listConversationMessages(conversationId, limit, offset);
+  const messages = await listConversationMessages(conversationId, limit, offset);
+  return messages.map((message) => ({
+    ...message,
+    originalMessage: message.originalMessage || message.messageBody || message.message || message.text || "",
+    originalLanguage: null,
+    translatedMessages: {}
+  }));
 }
 
 export async function sendConversationMessage(actor, payload) {
@@ -141,26 +186,38 @@ export async function sendConversationMessage(actor, payload) {
     otherUserId: payload.receiverId
   });
 
+  const originalText = hasText ? String(payload.message).trim() : null;
+
   const messageId = await createMessageRecord({
     conversationId: conversation.id,
     senderId: actor.id,
     receiverId: payload.receiverId,
-    messageBody: hasText ? String(payload.message).trim() : null,
+    messageBody: originalText,
     imageUrl: hasImage ? String(payload.imageUrl).trim() : null
   });
 
-  const messagePayload = {
+  // Build base payload with original message info
+  const basePayload = {
     id: messageId,
     conversationId: conversation.id,
     senderId: actor.id,
     receiverId: payload.receiverId,
-    messageBody: hasText ? String(payload.message).trim() : null,
+    messageBody: originalText,
+    originalMessage: originalText,
+    originalLanguage: null,
+    translatedMessages: {},
     imageUrl: hasImage ? String(payload.imageUrl).trim() : null,
     createdAt: new Date().toISOString()
   };
 
-  emitToUser(actor.id, "chat:message", messagePayload);
-  emitToUser(payload.receiverId, "chat:message", messagePayload);
+  // Emit personalized payloads to sender and receiver
+  emitToUser(actor.id, "chat:message", {
+    ...basePayload
+  });
+
+  emitToUser(payload.receiverId, "chat:message", {
+    ...basePayload
+  });
 
   await createNotificationRecord({
     userId: payload.receiverId,
@@ -173,7 +230,7 @@ export async function sendConversationMessage(actor, payload) {
     conversationId: conversation.id
   });
 
-  return messagePayload;
+  return basePayload;
 }
 
 function canPinDirectMessage(actor, message) {

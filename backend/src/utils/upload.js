@@ -68,3 +68,20 @@ export const chatUpload = buildUpload({
   allowedMimeTypes: chatAllowedMimeTypes,
   fileSizeLimitBytes: 10 * 1024 * 1024
 });
+
+const requestAllowedMimeTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+];
+
+export const requestUpload = buildUpload({
+  allowedMimeTypes: requestAllowedMimeTypes,
+  fileSizeLimitBytes: 25 * 1024 * 1024
+});

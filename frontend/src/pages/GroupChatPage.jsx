@@ -6,7 +6,17 @@ import { useGroup } from "../context/GroupContext";
 import { connectChatSocket } from "../services/socketClient";
 import { MessagePinMenu } from "../components/MessagePinMenu.jsx";
 import { PinnedMessagesPanel } from "../components/PinnedMessagesPanel.jsx";
-import { classifyMessage, parseLocationText, parseRequirementItems, parseScheduleText, summarizeMessage } from "../components/chatMessageUtils.js";
+import {
+  classifyMessage,
+  parseLocationText,
+  parseRequirementItems,
+  parseScheduleText,
+  parseServiceRequestMessage,
+  summarizeMessage,
+  getMessageDisplayText,
+  sanitizeMessageText,
+  sortMessagesChronologically
+} from "../components/chatMessageUtils.js";
 
 export function GroupChatPage({ groupId }) {
   const { user, token } = useAuth();
@@ -63,10 +73,11 @@ export function GroupChatPage({ groupId }) {
           }),
         ]);
 
+        const orderedMessages = sortMessagesChronologically(messagesRes.data.data || []);
         setGroupInfo(infoRes.data.data);
         setMembers(membersRes.data.data || []);
-        setMessages(messagesRes.data.data || []);
-        updateGroupMessages(groupId, messagesRes.data.data || []);
+        setMessages(orderedMessages);
+        updateGroupMessages(groupId, orderedMessages);
         await refreshPinnedMessages();
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load group");
@@ -100,17 +111,19 @@ export function GroupChatPage({ groupId }) {
 
     const handleGroupMessage = (payload) => {
       if (String(payload.groupId) === String(groupId)) {
+        const resolvedText = getMessageDisplayText(payload);
         const nextMessage = {
           id: payload.id || Date.now(),
           groupId: payload.groupId,
           senderId: payload.senderId,
           senderName: payload.senderName,
-          messageBody: payload.message,
+          messageBody: payload.originalMessage || payload.message || resolvedText,
+          originalMessage: payload.originalMessage || payload.message || resolvedText,
           imageUrl: payload.imageUrl,
           createdAt: payload.timestamp || new Date().toISOString(),
         };
 
-        setMessages((previous) => [...previous, nextMessage]);
+        setMessages((previous) => sortMessagesChronologically([...previous, nextMessage]));
         addGroupMessage(groupId, nextMessage);
       }
     };
@@ -181,17 +194,20 @@ export function GroupChatPage({ groupId }) {
           imageUrl: null,
         });
 
+        const apiMessage = response.data.data || {};
         const newMessage = {
-          id: response.data.data.id,
+          ...apiMessage,
+          id: apiMessage.id,
           groupId,
-          senderId: user?.id,
-          senderName: user?.name,
-          messageBody: messageInput.trim(),
-          imageUrl: null,
-          createdAt: new Date().toISOString(),
+          senderId: apiMessage.senderId || user?.id,
+          senderName: apiMessage.senderName || user?.name,
+          messageBody: apiMessage.originalMessage || apiMessage.message || messageInput.trim(),
+          originalMessage: apiMessage.originalMessage || apiMessage.message || messageInput.trim(),
+          imageUrl: apiMessage.imageUrl || null,
+          createdAt: apiMessage.createdAt || new Date().toISOString(),
         };
 
-        setMessages((previous) => [...previous, newMessage]);
+        setMessages((previous) => sortMessagesChronologically([...previous, newMessage]));
         addGroupMessage(groupId, newMessage);
         setMessageInput("");
         setError(null);
@@ -394,11 +410,57 @@ export function GroupChatPage({ groupId }) {
                     </div>
 
                     {msg.senderId !== user?.id && (
-                      <p className="text-xs font-semibold mb-1 opacity-75">
-                        {msg.senderName}
-                      </p>
+                      <p className="mb-1 text-xs font-semibold opacity-75">{msg.senderName}</p>
                     )}
-                    {msg.messageBody && <p className="break-words">{msg.messageBody}</p>}
+                    {(() => {
+                      const preferredLang = user?.preferredLanguage || null;
+                      const displayText = getMessageDisplayText(msg, preferredLang);
+                      const messageType = classifyMessage(msg);
+                      const parsedServiceRequest = messageType === "service_request" ? parseServiceRequestMessage(displayText) : null;
+
+                      if (messageType === "audio") {
+                        return (
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold opacity-80">Voice message</p>
+                            {displayText ? <p className="break-words whitespace-pre-wrap text-sm leading-6">{displayText}</p> : null}
+                          </div>
+                        );
+                      }
+
+                      if (messageType === "service_request" && parsedServiceRequest) {
+                        return (
+                          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div className="border-b border-slate-200 px-3 py-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">New Service Request</p>
+                              <p className="mt-0.5 text-sm font-semibold text-slate-900">{parsedServiceRequest.service || "Request details"}</p>
+                            </div>
+                            <div className="grid gap-2 px-3 py-3 sm:grid-cols-2">
+                              {parsedServiceRequest.requestId ? <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Request ID</p><p className="text-sm text-slate-800">{parsedServiceRequest.requestId}</p></div> : null}
+                              {parsedServiceRequest.customer ? <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Customer</p><p className="text-sm text-slate-800">{parsedServiceRequest.customer}</p></div> : null}
+                              {parsedServiceRequest.location ? <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Location</p><p className="text-sm text-slate-800">{parsedServiceRequest.location}</p></div> : null}
+                              {parsedServiceRequest.priority ? <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Priority</p><p className="text-sm text-slate-800">{parsedServiceRequest.priority}</p></div> : null}
+                            </div>
+                            <div className="space-y-2 border-t border-slate-200 px-3 py-3 text-sm text-slate-700">
+                              {parsedServiceRequest.problem ? <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Problem</p><p className="mt-1 whitespace-pre-wrap leading-6">{parsedServiceRequest.problem}</p></div> : null}
+                              {parsedServiceRequest.expectedSolution ? <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Expected Solution</p><p className="mt-1 whitespace-pre-wrap leading-6">{parsedServiceRequest.expectedSolution}</p></div> : null}
+                              {parsedServiceRequest.requirementDetails ? <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Requirement Details</p><p className="mt-1 whitespace-pre-wrap leading-6">{parsedServiceRequest.requirementDetails}</p></div> : null}
+                            </div>
+                            <div className="border-t border-slate-200 px-3 py-2 text-xs text-slate-500">
+                              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                {parsedServiceRequest.schedule ? <span><strong>Schedule:</strong> {parsedServiceRequest.schedule}</span> : null}
+                                {parsedServiceRequest.budget ? <span><strong>Budget:</strong> {parsedServiceRequest.budget}</span> : null}
+                                {parsedServiceRequest.attachments ? <span><strong>Attachments:</strong> {parsedServiceRequest.attachments}</span> : null}
+                              </div>
+                              {parsedServiceRequest.action ? <div className="mt-1 font-medium text-slate-600">{parsedServiceRequest.action}</div> : null}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return displayText ? (
+                        <p className="break-words whitespace-pre-wrap text-sm leading-6">{displayText}</p>
+                      ) : null;
+                    })()}
                     {msg.imageUrl && (
                       <img
                         src={msg.imageUrl}

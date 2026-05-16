@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createConversation,
+  getConversationById,
   getOrCreateChat,
   getPinnedMessages,
   listAvailableUsers,
@@ -23,6 +24,7 @@ chatRouter.get("/contacts", listChatContacts);
 chatRouter.get("/conversations", listConversations);
 chatRouter.get("/unread/total", getTotalUnreadCount);
 chatRouter.post("/conversations", createConversation);
+chatRouter.get("/conversations/:id", getConversationById);
 chatRouter.post("/get-or-create", getOrCreateChat);
 chatRouter.get("/conversations/:id/messages", getConversationMessages);
 chatRouter.get("/pinned/:conversationId", getPinnedMessages);

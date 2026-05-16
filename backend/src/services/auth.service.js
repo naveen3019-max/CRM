@@ -26,7 +26,10 @@ export async function signupUser(payload) {
     throw new ApiError(409, "Mobile number already registered");
   }
 
-  const role = Object.values(ROLES).includes(payload.role) ? payload.role : ROLES.CUSTOMER;
+  let role = Object.values(ROLES).includes(payload.role) ? payload.role : ROLES.CUSTOMER;
+  if (!Object.values(ROLES).includes(payload.role) && payload.workType) {
+    role = ROLES.SERVICE_PROFESSIONAL;
+  }
   const passwordHash = await bcrypt.hash(payload.password, 10);
 
   const userId = await createUser({
@@ -35,7 +38,9 @@ export async function signupUser(payload) {
     passwordHash,
     role,
     mobile: payload.mobile,
-    address: payload.address
+    workType: payload.workType,
+    serviceCategory: payload.workType || null,
+    preferredLanguage: payload.preferredLanguage || "en"
   });
 
   if (role === ROLES.VENDOR) {
@@ -61,7 +66,9 @@ export async function signupUser(payload) {
         role,
         phone: null,
         mobile: payload.mobile,
-        address: payload.address,
+        serviceCategory: payload.workType || null,
+        preferredLanguage: payload.preferredLanguage || "en",
+        profileCompleted: false,
         companyStatus: "pending"
       }
     };
@@ -83,7 +90,9 @@ export async function signupUser(payload) {
       role,
       phone: null,
       mobile: payload.mobile,
-      address: payload.address
+      serviceCategory: payload.workType || null,
+      preferredLanguage: payload.preferredLanguage || "en",
+      profileCompleted: false
     }
   };
 }
@@ -124,7 +133,9 @@ export async function loginUser(payload) {
       role: user.role,
       phone: user.phone || null,
       mobile: user.mobile || null,
-      address: user.address || null,
+      serviceCategory: user.service_category || user.work_type || null,
+      preferredLanguage: user.preferredLanguage || "en",
+      profileCompleted: Boolean(user.profile_completed),
       ...(user.role === ROLES.VENDOR ? { companyStatus } : {})
     }
   };
@@ -149,7 +160,15 @@ export async function getUserProfile(actorId) {
     role: user.role,
     phone: user.phone || null,
     mobile: user.mobile || null,
-    address: user.address || null,
+    state: user.state || null,
+    city: user.city || null,
+    pincode: user.pincode || null,
+    experience: user.experience || null,
+    about: user.about || null,
+    skills: user.skills || null,
+    workType: user.work_type || null,
+    preferredLanguage: user.preferredLanguage || "en",
+    profileCompleted: Boolean(user.profile_completed),
     createdAt: user.createdAt,
     ...(user.role === ROLES.VENDOR ? { companyStatus } : {})
   };
@@ -161,6 +180,14 @@ export async function updateUserProfile(actorId, payload) {
     throw new ApiError(404, "User not found");
   }
 
+  // Role-based validation for profile completion
+  if (payload.profileCompleted) {
+    // For non-customer roles, about field is required
+    if (user.role !== ROLES.CUSTOMER && (!payload.about || payload.about.trim().length < 20)) {
+      throw new ApiError(400, `${user.role} role requires 'about' section with at least 20 characters`);
+    }
+  }
+
   let passwordHash;
   if (payload.newPassword) {
     const isCurrentPasswordValid = await bcrypt.compare(payload.currentPassword, user.passwordHash);
@@ -170,11 +197,24 @@ export async function updateUserProfile(actorId, payload) {
     passwordHash = await bcrypt.hash(payload.newPassword, 10);
   }
 
-  await updateUserProfileById(actorId, {
-    name: payload.name,
-    phone: payload.phone,
-    passwordHash
-  });
+  // Build update payload with only provided profile fields
+  const updatePayload = {
+    ...(payload.name !== undefined && { name: payload.name }),
+    ...(payload.phone !== undefined && { phone: payload.phone }),
+    ...(payload.mobile !== undefined && { mobile: payload.mobile }),
+    ...(payload.state !== undefined && { state: payload.state }),
+    ...(payload.city !== undefined && { city: payload.city }),
+    ...(payload.pincode !== undefined && { pincode: payload.pincode }),
+    ...(payload.experience !== undefined && { experience: payload.experience }),
+    ...(payload.about !== undefined && { about: payload.about }),
+    ...(payload.skills !== undefined && { skills: payload.skills }),
+    ...(payload.workType !== undefined && { workType: payload.workType }),
+    ...(payload.preferredLanguage !== undefined && { preferredLanguage: payload.preferredLanguage }),
+    ...(payload.profileCompleted !== undefined && { profileCompleted: payload.profileCompleted }),
+    ...(passwordHash && { passwordHash })
+  };
+
+  await updateUserProfileById(actorId, updatePayload);
 
   const updated = await findUserById(actorId);
   return {
@@ -183,6 +223,16 @@ export async function updateUserProfile(actorId, payload) {
     email: updated.email,
     role: updated.role,
     phone: updated.phone || null,
+    mobile: updated.mobile || null,
+    state: updated.state || null,
+    city: updated.city || null,
+    pincode: updated.pincode || null,
+    experience: updated.experience || null,
+    about: updated.about || null,
+    skills: updated.skills || null,
+    serviceCategory: updated.service_category || updated.work_type || null,
+    preferredLanguage: updated.preferredLanguage || "en",
+    profileCompleted: Boolean(updated.profile_completed),
     createdAt: updated.createdAt
   };
 }
@@ -212,7 +262,8 @@ export async function verifyEmail(verificationToken) {
       name: user.name,
       email: user.email,
       role: user.role,
-      phone: null
+      phone: null,
+      workType: user.work_type || null
     }
   };
 }

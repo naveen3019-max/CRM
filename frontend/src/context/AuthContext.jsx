@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import i18n, { normalizeLanguageCode } from "../i18n/index.js";
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = "verbena_auth";
@@ -54,10 +55,29 @@ function readStoredAuth() {
   }
 }
 
+function persistLanguage(languageCode) {
+  try {
+    window.localStorage.setItem("verbena_language", normalizeLanguageCode(languageCode));
+  } catch {
+    // Silently fail
+  }
+}
+
 export function AuthProvider({ children }) {
   const initialState = readStoredAuth();
   const [token, setToken] = useState(initialState?.token || "");
   const [user, setUser] = useState(initialState?.user || null);
+
+  useEffect(() => {
+    // Keep the app in English regardless of any saved preference.
+    const nextLanguage = "en";
+    if (i18n.language !== nextLanguage) {
+      i18n.changeLanguage(nextLanguage).catch(() => {
+        // Silently fail
+      });
+    }
+    persistLanguage(nextLanguage);
+  }, [user?.preferredLanguage]);
 
   const login = ({ token: nextToken, user: nextUser }) => {
     if (isJwtExpired(nextToken)) {
@@ -67,8 +87,16 @@ export function AuthProvider({ children }) {
       return;
     }
 
+    // Normalize service category / workType for backward compatibility
+    const normalizedUser = {
+      ...nextUser,
+      workType: nextUser.workType || nextUser.serviceCategory || null,
+      serviceCategory: nextUser.serviceCategory || nextUser.workType || null,
+      preferredLanguage: "en"
+    };
+
     setToken(nextToken);
-    setUser(nextUser);
+    setUser(normalizedUser);
     // Clear stale unread count on login
     try {
       window.localStorage.removeItem("verbena_unread_count");
@@ -79,7 +107,7 @@ export function AuthProvider({ children }) {
       STORAGE_KEY,
       JSON.stringify({
         token: nextToken,
-        user: nextUser
+        user: normalizedUser
       })
     );
   };
@@ -97,7 +125,13 @@ export function AuthProvider({ children }) {
   };
 
   const updateUser = (nextUser) => {
-    setUser(nextUser);
+    const normalizedUser = {
+      ...nextUser,
+      workType: nextUser.workType || nextUser.serviceCategory || null,
+      serviceCategory: nextUser.serviceCategory || nextUser.workType || null,
+      preferredLanguage: "en"
+    };
+    setUser(normalizedUser);
 
     const raw = window.localStorage.getItem(STORAGE_KEY);
     const previous = raw ? JSON.parse(raw) : {};
@@ -106,7 +140,7 @@ export function AuthProvider({ children }) {
       JSON.stringify({
         ...previous,
         token,
-        user: nextUser
+        user: normalizedUser
       })
     );
   };

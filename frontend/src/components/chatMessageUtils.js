@@ -99,9 +99,108 @@ export function formatContactTimestamp(value) {
   });
 }
 
+export function sortMessagesChronologically(messages = []) {
+  return [...messages].sort((left, right) => {
+    const leftTime = new Date(left?.createdAt || left?.created_at || 0).valueOf();
+    const rightTime = new Date(right?.createdAt || right?.created_at || 0).valueOf();
+
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
+
+    return Number(left?.id || 0) - Number(right?.id || 0);
+  });
+}
+
+export function resolveTranslatedMessage(message) {
+  if (!message) {
+    return "";
+  }
+
+  const candidates = [message.originalMessage, message.messageBody, message.message, message.text];
+
+  for (const candidate of candidates) {
+    const sanitized = sanitizeMessageText(candidate);
+    if (sanitized) {
+      return sanitized;
+    }
+  }
+
+  return "";
+}
+
+export function getMessageDisplayText(message) {
+  return resolveTranslatedMessage(message);
+}
+
+export function normalizeTranslationText(value, originalText = "") {
+  const sanitized = sanitizeMessageText(value);
+  if (!sanitized) {
+    return "";
+  }
+
+  const normalizedOriginal = sanitizeMessageText(originalText).toLowerCase();
+  if (!normalizedOriginal) {
+    return sanitized;
+  }
+
+  const lines = sanitized
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length <= 1) {
+    return sanitized;
+  }
+
+  const filtered = lines.filter((line) => line.toLowerCase() !== normalizedOriginal);
+  if (!filtered.length) {
+    return sanitized;
+  }
+
+  return filtered.join("\n");
+}
+
+export function sanitizeMessageText(value) {
+  const text = String(value ?? "").replace(/\r\n/g, "\n").trim();
+  if (!text) {
+    return "";
+  }
+
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => {
+      const normalized = line.toLowerCase();
+      return !(
+        normalized.startsWith("translated from") ||
+        normalized.includes("translated from") ||
+        normalized.includes("ಅನುವಾದ") ||
+        normalized.includes("अनुवाद") ||
+        normalized.includes("പരിഭാഷ") ||
+        normalized.includes("மொழிபெயர்ப்பு") ||
+        normalized.includes("అనువాద")
+      );
+    });
+
+  if (!lines.length) {
+    return text;
+  }
+
+  const normalizedLines = [];
+  for (const line of lines) {
+    if (!normalizedLines.includes(line)) {
+      normalizedLines.push(line);
+    }
+  }
+
+  return normalizedLines.join("\n");
+}
+
 export function classifyMessage(message) {
   const explicitType = String(message.type || message.messageType || "").toLowerCase();
-  const body = String(message.messageBody || "").trim();
+  const body = String(getMessageDisplayText(message) || "").trim();
 
   if (message.isSystem || explicitType === "system" || body.toLowerCase().startsWith("system:")) {
     return "system";
@@ -131,7 +230,125 @@ export function classifyMessage(message) {
     return "requirement";
   }
 
+  if (
+    explicitType === "assignment" ||
+    body.toLowerCase().startsWith("work assignment notice") ||
+    body.toLowerCase().startsWith("assignment status update")
+  ) {
+    return "assignment";
+  }
+
+  if (
+    explicitType === "service_request" ||
+    body.toLowerCase().startsWith("new service request") ||
+    body.toLowerCase().includes("service requests panel to assign a worker")
+  ) {
+    return "service_request";
+  }
+
   return "text";
+}
+
+export function parseAssignmentMessage(body) {
+  const normalized = sanitizeMessageText(body);
+  if (!normalized) {
+    return null;
+  }
+
+  const lines = normalized
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return null;
+  }
+
+  const heading = lines[0].toLowerCase();
+  const kind = heading.startsWith("assignment status update") ? "status" : "notice";
+
+  const fields = {};
+  for (const line of lines.slice(1)) {
+    const match = line.match(/^([^:]+):\s*(.*)$/);
+    if (!match) {
+      continue;
+    }
+
+    const key = match[1].trim().toLowerCase();
+    const value = match[2].trim();
+
+    if (!value) {
+      continue;
+    }
+
+    fields[key] = value;
+  }
+
+  return {
+    kind,
+    title: lines[0],
+    fields,
+    customer: fields.customer || "",
+    service: fields.service || fields.assignment || "",
+    location: fields.location || "",
+    details: fields.details || fields.problem || fields.status || "",
+    schedule: fields["preferred schedule"] || fields.schedule || "",
+    priority: fields.priority || "",
+    attachments: fields.attachments || "",
+    instructions: fields.instructions || "",
+    action: lines.find((line) => /accept or reject/i.test(line)) || "",
+    statusLine: fields.status || ""
+  };
+}
+
+export function parseServiceRequestMessage(body) {
+  const normalized = sanitizeMessageText(body);
+  if (!normalized) {
+    return null;
+  }
+
+  const lines = normalized
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return null;
+  }
+
+  const fields = {};
+  for (const line of lines.slice(1)) {
+    const match = line.match(/^([^:]+):\s*(.*)$/);
+    if (!match) {
+      continue;
+    }
+
+    const key = match[1].trim().toLowerCase();
+    const value = match[2].trim();
+
+    if (!value) {
+      continue;
+    }
+
+    fields[key] = value;
+  }
+
+  return {
+    title: lines[0],
+    requestId: fields["request id"] || "",
+    customer: fields.customer || "",
+    service: fields.service || "",
+    location: fields.location || "",
+    problem: fields.problem || "",
+    expectedSolution: fields["expected solution"] || "",
+    requirementDetails: fields["requirement details"] || "",
+    budget: fields.budget || "",
+    schedule: fields["preferred schedule"] || "",
+    priority: fields.priority || "",
+    attachments: fields.attachments || "",
+    action: lines.find((line) => /service requests panel/i.test(line)) || "",
+    fields
+  };
 }
 
 export function parseLocationText(body) {
@@ -193,30 +410,13 @@ export function parseRequirementItems(body) {
 
 export function summarizeMessage(message) {
   const type = classifyMessage(message);
+  if (type === "service_request") return "Service request received";
+  if (type === "location") return "Location shared";
+  if (type === "schedule") return "Visit scheduled";
+  if (type === "requirement") return "Requirement updated";
+  if (type === "image") return "Image attachment";
+  if (type === "audio") return "Voice message";
+  if (type === "system") return String(getMessageDisplayText(message) || "Workflow update").replace(/^system:/i, "").trim();
 
-  if (type === "location") {
-    return "Location shared";
-  }
-
-  if (type === "schedule") {
-    return "Visit scheduled";
-  }
-
-  if (type === "requirement") {
-    return "Requirement updated";
-  }
-
-  if (type === "image") {
-    return "Image attachment";
-  }
-
-  if (type === "audio") {
-    return "Voice message";
-  }
-
-  if (type === "system") {
-    return String(message.messageBody || "Workflow update").replace(/^system:/i, "").trim();
-  }
-
-  return String(message.messageBody || "").trim() || "Message";
+  return String(getMessageDisplayText(message) || "").trim() || "Message";
 }

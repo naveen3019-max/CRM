@@ -115,8 +115,8 @@ export function RoleLayout() {
     return (
       <GroupProvider>
         <div className="flex h-screen flex-col overflow-hidden bg-slate-50 lg:grid lg:grid-cols-[260px_1fr]">
-          <RoleSidebar role={user.role} onLogout={logout} chatMode />
-          <main className="min-h-0 min-w-0 flex-1">
+          <RoleSidebar role={user.role} user={user} onLogout={logout} chatMode />
+          <main className="min-h-0 min-w-0 flex-1 overscroll-contain">
             <Outlet />
           </main>
         </div>
@@ -126,11 +126,11 @@ export function RoleLayout() {
 
   return (
     <GroupProvider>
-      <div className="mx-auto grid max-w-[1600px] gap-4 p-3 sm:p-4 lg:grid-cols-[280px_1fr] lg:gap-5 lg:p-6">
-        <RoleSidebar role={user.role} onLogout={logout} chatMode={false} />
-        <main className="min-w-0">
+      <div className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-3 p-2 sm:p-4 lg:grid-cols-[280px_1fr] lg:gap-5 lg:p-6">
+        <RoleSidebar role={user.role} user={user} onLogout={logout} chatMode={false} />
+        <main className="min-w-0 pb-4 sm:pb-0">
           <GlobalHeader />
-          <div className="space-y-5">
+          <div className="space-y-4 sm:space-y-5">
             <Outlet />
           </div>
         </main>

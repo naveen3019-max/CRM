@@ -8,6 +8,7 @@ import {
   pinMessage,
   openConversation,
   getOrCreateConversation,
+  getConversation,
   unpinMessage,
   sendConversationMessage,
   getAvailableUsers
@@ -36,6 +37,16 @@ export const listAvailableUsers = asyncHandler(async (req, res) => {
 export const createConversation = asyncHandler(async (req, res) => {
   const data = await openConversation(req.user, req.body);
   res.status(201).json({ success: true, data });
+});
+
+export const getConversationById = asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    return res.status(400).json({ success: false, message: "conversation id is required" });
+  }
+
+  const data = await getConversation(req.user, id);
+  res.json({ success: true, data });
 });
 
 export const getOrCreateChat = asyncHandler(async (req, res) => {

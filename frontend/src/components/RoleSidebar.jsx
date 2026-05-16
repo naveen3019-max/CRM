@@ -1,8 +1,53 @@
 import clsx from "clsx";
 import { Link, useLocation } from "react-router-dom";
-import { BriefcaseBusiness, Cable, Handshake, LayoutDashboard, ShieldCheck, UserRoundCog, Users, UserCircle, Menu, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import {
+  BriefcaseBusiness,
+  Cable,
+  Handshake,
+  LayoutDashboard,
+  ShieldCheck,
+  UserRoundCog,
+  Users,
+  UserCircle,
+  Menu,
+  X,
+  Wrench,
+  Paintbrush,
+  Hammer
+} from "lucide-react";
 import { useUnreadCount } from "../context/UnreadContext.jsx";
 import { useState, useRef, useEffect } from "react";
+
+function toTitleCase(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getFieldServiceBranding(workType) {
+  const normalized = String(workType || "").trim().toLowerCase();
+
+  if (!normalized) {
+    return { title: "Field Services", icon: Wrench };
+  }
+
+  if (normalized.includes("paint")) {
+    return { title: `${toTitleCase(workType)} Services`, icon: Paintbrush };
+  }
+
+  if (normalized.includes("carpent") || normalized.includes("wood")) {
+    return { title: `${toTitleCase(workType)} Services`, icon: Hammer };
+  }
+
+  if (normalized.includes("electri")) {
+    return { title: `${toTitleCase(workType)} Services`, icon: Cable };
+  }
+
+  return { title: `${toTitleCase(workType)} Services`, icon: Wrench };
+}
 
 const roleConfig = {
   admin: {
@@ -85,11 +130,16 @@ const mobileLinkIconMap = {
   Profile: UserCircle
 };
 
-export function RoleSidebar({ role, onLogout, chatMode = false }) {
+export function RoleSidebar({ role, user, onLogout, chatMode = false }) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const location = useLocation();
-  const config = roleConfig[role] || roleConfig.customer;
+  const baseConfig = roleConfig[role] || roleConfig.customer;
+  const fieldServiceBranding = role === "field_work" ? getFieldServiceBranding(user?.workType) : null;
+  const config = fieldServiceBranding
+    ? { ...baseConfig, title: fieldServiceBranding.title, icon: fieldServiceBranding.icon }
+    : baseConfig;
   const Icon = config.icon;
   const { totalUnreadCount } = useUnreadCount();
   const currentRoute = `${location.pathname}${location.search}${location.hash}`;
@@ -99,6 +149,26 @@ export function RoleSidebar({ role, onLogout, chatMode = false }) {
       return currentRoute === linkPath;
     }
     return location.pathname === linkPath;
+  };
+
+  const translateLabel = (label) => {
+    const keyMap = {
+      Overview: "sidebar.overview",
+      Verifications: "sidebar.verifications",
+      Users: "sidebar.users",
+      Chat: "sidebar.chat",
+      Profile: "sidebar.profile",
+      Leads: "sidebar.leads",
+      "Follow-ups": "sidebar.followups",
+      Requests: "sidebar.requests",
+      History: "sidebar.history",
+      Orders: "sidebar.orders",
+      Updates: "sidebar.updates",
+      Jobs: "sidebar.jobs",
+      "Proof Upload": "sidebar.proofUpload",
+      Tasks: "sidebar.tasks"
+    };
+    return keyMap[label] ? t(keyMap[label]) : label;
   };
 
   // Close menu when clicking outside
@@ -134,7 +204,7 @@ export function RoleSidebar({ role, onLogout, chatMode = false }) {
               <Icon className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-slate-500">Verbena Tech</p>
+              <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-slate-500">{t("sidebar.verbenaTech")}</p>
               <p className="truncate font-heading text-xs font-semibold text-slate-800">{config.title}</p>
             </div>
           </div>
@@ -178,7 +248,7 @@ export function RoleSidebar({ role, onLogout, chatMode = false }) {
                         : "text-slate-700 hover:bg-slate-100"
                     )}
                   >
-                    {link.label}
+                    {translateLabel(link.label)}
                     {isChatLink && totalUnreadCount > 0 && (
                       <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
                         {totalUnreadCount > 9 ? "9+" : totalUnreadCount}
@@ -194,7 +264,7 @@ export function RoleSidebar({ role, onLogout, chatMode = false }) {
                 onClick={onLogout}
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
               >
-                Sign out
+                {t("sidebar.signOut")}
               </button>
             </div>
           </div>
@@ -220,7 +290,7 @@ export function RoleSidebar({ role, onLogout, chatMode = false }) {
             <Icon className="h-5 w-5" />
           </div>
           <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Verbena Tech</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("sidebar.verbenaTech")}</p>
             <p className="font-heading text-lg font-semibold text-slate-800">{config.title}</p>
           </div>
         </div>
@@ -228,7 +298,7 @@ export function RoleSidebar({ role, onLogout, chatMode = false }) {
         <nav className="space-y-2">
           <div className={clsx("sidebar-link", chatMode ? "rounded-lg hover:bg-slate-100" : "sidebar-link-idle")}>
             <LayoutDashboard className="h-4 w-4" />
-            Dashboards
+            {t("sidebar.dashboards")}
           </div>
           {config.links.map((link) => {
             const isActive = isLinkActive(link.path);
@@ -248,7 +318,7 @@ export function RoleSidebar({ role, onLogout, chatMode = false }) {
                       : "sidebar-link-idle"
                 )}
               >
-                {link.label}
+                {translateLabel(link.label)}
                 {isChatLink && totalUnreadCount > 0 && (
                   <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
                     {totalUnreadCount > 9 ? "9+" : totalUnreadCount}
@@ -267,7 +337,7 @@ export function RoleSidebar({ role, onLogout, chatMode = false }) {
             chatMode ? "rounded-lg" : "rounded-xl"
           )}
         >
-          Sign out
+          {t("sidebar.signOut")}
         </button>
       </aside>
     </>

@@ -14,6 +14,8 @@ import { companyRouter } from "./company.routes.js";
 import { companyAdminRouter } from "./companyAdmin.routes.js";
 import { communicationRouter } from "./communication.routes.js";
 import { searchRouter } from "./search.routes.js";
+import { serviceRequestsRouter } from "./serviceRequests.routes.js";
+import workAssignmentsRouter from "./workAssignments.routes.js";
 
 export const apiRouter = Router();
 
@@ -31,3 +33,5 @@ apiRouter.use("/company", companyRouter);
 apiRouter.use("/company-admin", companyAdminRouter);
 apiRouter.use("/communication", communicationRouter);
 apiRouter.use("/search", searchRouter);
+apiRouter.use("/service-requests", serviceRequestsRouter);
+apiRouter.use("/work-assignments", workAssignmentsRouter);

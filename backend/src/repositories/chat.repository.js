@@ -1,5 +1,64 @@
 import { pool } from "../config/db.js";
 
+let translationColumnsReady = false;
+
+// Ensure translation columns exist at module initialization
+async function ensureTranslationColumnsExist() {
+  if (translationColumnsReady) return;
+  try {
+    const [rows] = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'messages' AND COLUMN_NAME = 'original_message'"
+    );
+    const exists = rows && rows[0] && rows[0].cnt ? Number(rows[0].cnt) > 0 : false;
+    if (!exists) {
+      console.log('[DB] Adding translation columns to messages table...');
+      try {
+        await pool.query(`ALTER TABLE messages ADD COLUMN original_message TEXT NULL AFTER image_url`);
+      } catch (e1) {
+        if (e1.code !== 'ER_DUP_FIELDNAME') throw e1;
+      }
+      try {
+        await pool.query(`ALTER TABLE messages ADD COLUMN original_language VARCHAR(10) NULL AFTER original_message`);
+      } catch (e2) {
+        if (e2.code !== 'ER_DUP_FIELDNAME') throw e2;
+      }
+      try {
+        await pool.query(`ALTER TABLE messages ADD COLUMN translated_messages JSON NULL AFTER original_language`);
+      } catch (e3) {
+        if (e3.code !== 'ER_DUP_FIELDNAME') throw e3;
+      }
+      console.log('[DB] Translation columns added successfully');
+    }
+    translationColumnsReady = true;
+  } catch (err) {
+    console.warn('[DB] Warning: Translation columns may not exist:', err && err.message);
+  }
+}
+
+// Trigger initialization
+ensureTranslationColumnsExist().catch(err => console.warn('[DB] Init error:', err));
+
+// Helper to extract translation fields or nulls if columns don't exist
+function getTranslationFieldsSQL(prefix = 'm') {
+  return `${prefix}.original_message AS originalMessage, ${prefix}.original_language AS originalLanguage, ${prefix}.translated_messages AS translatedMessages`;
+}
+
+// Helper to handle queries that might fail due to missing columns
+async function executeQueryWithFallback(query, fallbackQuery, params) {
+  try {
+    const [rows] = await pool.query(query, params);
+    return rows;
+  } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('original_message')) {
+      console.log('[DB] Translation columns not ready, using fallback query');
+      await ensureTranslationColumnsExist();
+      const [rows] = await pool.query(fallbackQuery, params);
+      return rows;
+    }
+    throw err;
+  }
+}
+
 function sortParticipants(userA, userB) {
   const first = Number(userA);
   const second = Number(userB);
@@ -43,17 +102,25 @@ export async function getConversationById(conversationId) {
 }
 
 export async function getMessageById(messageId) {
-  const [rows] = await pool.query(
-    `SELECT id, conversation_id AS conversationId, group_id AS groupId, sender_id AS senderId,
+  const query = `SELECT id, conversation_id AS conversationId, group_id AS groupId, sender_id AS senderId,
             receiver_id AS receiverId, message_body AS messageBody, image_url AS imageUrl,
+            original_message AS originalMessage, original_language AS originalLanguage, translated_messages AS translatedMessages,
             is_read AS isRead, is_group_message AS isGroupMessage, pinned AS pinned,
             pinned_at AS pinnedAt, created_at AS createdAt
      FROM messages
      WHERE id = ?
-     LIMIT 1`,
-    [messageId]
-  );
-
+     LIMIT 1`;
+  
+  const fallbackQuery = `SELECT id, conversation_id AS conversationId, group_id AS groupId, sender_id AS senderId,
+            receiver_id AS receiverId, message_body AS messageBody, image_url AS imageUrl,
+            NULL AS originalMessage, NULL AS originalLanguage, NULL AS translatedMessages,
+            is_read AS isRead, is_group_message AS isGroupMessage, pinned AS pinned,
+            pinned_at AS pinnedAt, created_at AS createdAt
+     FROM messages
+     WHERE id = ?
+     LIMIT 1`;
+  
+  const rows = await executeQueryWithFallback(query, fallbackQuery, [messageId]);
   return rows[0] || null;
 }
 
@@ -74,11 +141,32 @@ export async function listConversationsForUser(userId) {
 }
 
 export async function createMessageRecord({ conversationId, senderId, receiverId, messageBody, imageUrl }) {
-  const [result] = await pool.query(
-    `INSERT INTO messages (conversation_id, sender_id, receiver_id, message_body, image_url)
-     VALUES (?, ?, ?, ?, ?)`,
-    [conversationId, senderId, receiverId, messageBody || null, imageUrl || null]
-  );
+  const originalMessage = messageBody || null;
+  const originalLanguage = null;
+  const translatedMessages = JSON.stringify({});
+
+  const query = `INSERT INTO messages (conversation_id, sender_id, receiver_id, message_body, image_url, original_message, original_language, translated_messages)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  
+  const fallbackQuery = `INSERT INTO messages (conversation_id, sender_id, receiver_id, message_body, image_url)
+     VALUES (?, ?, ?, ?, ?)`;
+  
+  let result;
+  try {
+    [result] = await pool.query(query,
+      [conversationId, senderId, receiverId, messageBody || null, imageUrl || null, originalMessage, originalLanguage, translatedMessages]
+    );
+  } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      console.log('[DB] Translation columns not ready, creating message without translation fields');
+      await ensureTranslationColumnsExist();
+      [result] = await pool.query(fallbackQuery,
+        [conversationId, senderId, receiverId, messageBody || null, imageUrl || null]
+      );
+    } else {
+      throw err;
+    }
+  }
 
   await pool.query(
     `UPDATE conversations
@@ -91,20 +179,27 @@ export async function createMessageRecord({ conversationId, senderId, receiverId
 }
 
 export async function listConversationMessages(conversationId, limit, offset) {
-  const [rows] = await pool.query(
-    `SELECT m.id, m.conversation_id AS conversationId, m.sender_id AS senderId, m.receiver_id AS receiverId,
-            m.message_body AS messageBody, m.image_url AS imageUrl, m.is_read AS isRead,
+  const query = `SELECT m.id, m.conversation_id AS conversationId, m.sender_id AS senderId, m.receiver_id AS receiverId,
+            m.message_body AS messageBody, m.image_url AS imageUrl, m.original_message AS originalMessage, m.original_language AS originalLanguage, m.translated_messages AS translatedMessages, m.is_read AS isRead,
             m.pinned AS pinned, m.pinned_at AS pinnedAt, m.created_at AS createdAt,
             u.name AS senderName, u.role AS senderRole
      FROM messages m
      INNER JOIN users u ON u.id = m.sender_id
      WHERE m.conversation_id = ?
-     ORDER BY m.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [conversationId, limit, offset]
-  );
-
-  return rows.reverse();
+    ORDER BY m.created_at ASC
+     LIMIT ? OFFSET ?`;
+  
+  const fallbackQuery = `SELECT m.id, m.conversation_id AS conversationId, m.sender_id AS senderId, m.receiver_id AS receiverId,
+            m.message_body AS messageBody, m.image_url AS imageUrl, NULL AS originalMessage, NULL AS originalLanguage, NULL AS translatedMessages, m.is_read AS isRead,
+            m.pinned AS pinned, m.pinned_at AS pinnedAt, m.created_at AS createdAt,
+            u.name AS senderName, u.role AS senderRole
+     FROM messages m
+     INNER JOIN users u ON u.id = m.sender_id
+     WHERE m.conversation_id = ?
+    ORDER BY m.created_at ASC
+     LIMIT ? OFFSET ?`;
+  
+  return executeQueryWithFallback(query, fallbackQuery, [conversationId, limit, offset]);
 }
 
 export async function markConversationMessagesRead(conversationId, receiverId) {
@@ -206,35 +301,47 @@ export async function getTotalUnreadCountByScopes(receiverId, scopes = []) {
 }
 
 export async function listPinnedConversationMessages(conversationId) {
-  const [rows] = await pool.query(
-    `SELECT m.id, m.conversation_id AS conversationId, m.sender_id AS senderId, m.receiver_id AS receiverId,
-            m.message_body AS messageBody, m.image_url AS imageUrl, m.is_read AS isRead,
+  const query = `SELECT m.id, m.conversation_id AS conversationId, m.sender_id AS senderId, m.receiver_id AS receiverId,
+            m.message_body AS messageBody, m.image_url AS imageUrl, m.original_message AS originalMessage, m.original_language AS originalLanguage, m.translated_messages AS translatedMessages, m.is_read AS isRead,
             m.pinned AS pinned, m.pinned_at AS pinnedAt, m.created_at AS createdAt,
             u.name AS senderName, u.role AS senderRole
      FROM messages m
      INNER JOIN users u ON u.id = m.sender_id
      WHERE conversation_id = ? AND pinned = 1
-     ORDER BY pinned_at DESC, created_at DESC`,
-    [conversationId]
-  );
-
-  return rows;
+     ORDER BY m.pinned_at DESC, m.created_at DESC`;
+  
+  const fallbackQuery = `SELECT m.id, m.conversation_id AS conversationId, m.sender_id AS senderId, m.receiver_id AS receiverId,
+            m.message_body AS messageBody, m.image_url AS imageUrl, NULL AS originalMessage, NULL AS originalLanguage, NULL AS translatedMessages, m.is_read AS isRead,
+            m.pinned AS pinned, m.pinned_at AS pinnedAt, m.created_at AS createdAt,
+            u.name AS senderName, u.role AS senderRole
+     FROM messages m
+     INNER JOIN users u ON u.id = m.sender_id
+     WHERE conversation_id = ? AND pinned = 1
+     ORDER BY m.pinned_at DESC, m.created_at DESC`;
+  
+  return executeQueryWithFallback(query, fallbackQuery, [conversationId]);
 }
 
 export async function listPinnedGroupMessages(groupId) {
-  const [rows] = await pool.query(
-    `SELECT m.id, m.group_id AS groupId, m.sender_id AS senderId, m.receiver_id AS receiverId,
-            m.message_body AS messageBody, m.image_url AS imageUrl, m.is_read AS isRead,
+  const query = `SELECT m.id, m.group_id AS groupId, m.sender_id AS senderId, m.receiver_id AS receiverId,
+            m.message_body AS messageBody, m.image_url AS imageUrl, m.original_message AS originalMessage, m.original_language AS originalLanguage, m.translated_messages AS translatedMessages, m.is_read AS isRead,
             m.pinned AS pinned, m.pinned_at AS pinnedAt, m.created_at AS createdAt,
             u.name AS senderName, u.role AS senderRole
      FROM messages m
      INNER JOIN users u ON u.id = m.sender_id
      WHERE m.group_id = ? AND m.is_group_message = 1 AND m.pinned = 1
-     ORDER BY m.pinned_at DESC, m.created_at DESC`,
-    [groupId]
-  );
-
-  return rows;
+     ORDER BY m.pinned_at DESC, m.created_at DESC`;
+  
+  const fallbackQuery = `SELECT m.id, m.group_id AS groupId, m.sender_id AS senderId, m.receiver_id AS receiverId,
+            m.message_body AS messageBody, m.image_url AS imageUrl, NULL AS originalMessage, NULL AS originalLanguage, NULL AS translatedMessages, m.is_read AS isRead,
+            m.pinned AS pinned, m.pinned_at AS pinnedAt, m.created_at AS createdAt,
+            u.name AS senderName, u.role AS senderRole
+     FROM messages m
+     INNER JOIN users u ON u.id = m.sender_id
+     WHERE m.group_id = ? AND m.is_group_message = 1 AND m.pinned = 1
+     ORDER BY m.pinned_at DESC, m.created_at DESC`;
+  
+  return executeQueryWithFallback(query, fallbackQuery, [groupId]);
 }
 
 export async function setMessagePinState(messageId, pinned) {
@@ -247,3 +354,4 @@ export async function setMessagePinState(messageId, pinned) {
 
   return result.affectedRows;
 }
+

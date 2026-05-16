@@ -1,5 +1,7 @@
 import { ImagePlus, SendHorizonal, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext.jsx";
+import { getMessageDisplayText } from "./chatMessageUtils.js";
 import { API_ORIGIN } from "../services/runtimeConfig.js";
 
 function resolveMessageImageUrl(rawUrl) {
@@ -47,6 +49,8 @@ export function ChatPanel({
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageError, setImageError] = useState("");
   const [previewImageUrl, setPreviewImageUrl] = useState("");
+  const { user } = useAuth();
+  const preferredLang = user?.preferredLanguage || null;
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -163,15 +167,14 @@ export function ChatPanel({
                   </button>
                 ) : null}
 
-                {message.messageBody ? (
-                  <p
-                    className={`break-words px-3 pb-1 pt-2 ${
-                      hasImage ? "text-slate-700" : message.isMine ? "text-white" : "text-slate-700"
-                    }`}
-                  >
-                    {message.messageBody}
-                  </p>
-                ) : null}
+                { (() => {
+                  const display = getMessageDisplayText(message, preferredLang);
+                  return display ? (
+                    <p className={`break-words px-3 pb-1 pt-2 ${hasImage ? "text-slate-700" : message.isMine ? "text-white" : "text-slate-700"}`}>
+                      {display}
+                    </p>
+                  ) : null;
+                })() }
 
                 <p className={`px-3 pb-2 pt-1 text-[10px] ${hasImage ? "text-slate-400" : message.isMine ? "text-brand-100" : "text-slate-400"}`}>
                   {new Date(message.createdAt).toLocaleTimeString()}

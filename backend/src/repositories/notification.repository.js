@@ -9,6 +9,26 @@ export async function createNotificationRecord({ userId, message, payloadJson })
   return result.insertId;
 }
 
+export async function createNotificationForAllAdmins(message, payloadJson) {
+  // Get all admin users
+  const [admins] = await pool.query(
+    `SELECT id FROM users WHERE role = 'admin'`
+  );
+  
+  // Create a notification for each admin
+  const notificationIds = [];
+  for (const admin of admins) {
+    const id = await createNotificationRecord({
+      userId: admin.id,
+      message,
+      payloadJson
+    });
+    notificationIds.push(id);
+  }
+  
+  return notificationIds;
+}
+
 export async function listNotificationsForUser(userId, limit = 50) {
   const [rows] = await pool.query(
     `SELECT id, user_id AS userId, message, payload_json AS payloadJson,

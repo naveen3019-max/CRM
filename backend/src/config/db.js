@@ -27,10 +27,12 @@ const transientConnectionErrorCodes = new Set([
   "ETIMEDOUT",
   "EPIPE",
   "ENOTFOUND",
-  "PROTOCOL_CONNECTION_LOST"
+  "EAI_AGAIN",
+  "PROTOCOL_CONNECTION_LOST",
+  "HANDSHAKE_SSL_ERROR"
 ]);
 
-function isTransientConnectionError(error) {
+export function isTransientConnectionError(error) {
   return transientConnectionErrorCodes.has(error?.code);
 }
 
@@ -66,4 +68,18 @@ export async function verifyDatabaseConnection() {
       }
     }
   }
+}
+
+export function getDatabaseDebugSummary() {
+  return {
+    host: env.dbHost,
+    port: env.dbPort,
+    database: env.dbName,
+    user: env.dbUser,
+    ssl: env.dbSsl,
+    sslRejectUnauthorized: env.dbSslRejectUnauthorized,
+    connectTimeoutMs: env.dbConnectTimeoutMs,
+    connectRetries: env.dbConnectRetries,
+    connectRetryDelayMs: env.dbConnectRetryDelayMs
+  };
 }

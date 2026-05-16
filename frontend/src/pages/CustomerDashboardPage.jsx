@@ -19,7 +19,7 @@ export default function CustomerDashboardPage() {
       }
 
       try {
-        const response = await apiClient.get("/leads", withAuth(token));
+        const response = await apiClient.get("/service-requests", withAuth(token));
         setRequests(response.data.data || []);
       } catch {
         setRequests([]);
@@ -32,13 +32,22 @@ export default function CustomerDashboardPage() {
   return (
     <section className="space-y-5">
       <div className="flex sm:justify-end">
-        <button
-          type="button"
-          onClick={() => navigate("/customer/chat")}
-          className="w-full rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 sm:w-auto"
-        >
-          Open Chat
-        </button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <button
+            type="button"
+            onClick={() => navigate("/customer/service-request/new")}
+            className="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
+          >
+            Create Service Request
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/customer/chat")}
+            className="w-full rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 sm:w-auto"
+          >
+            Open Chat
+          </button>
+        </div>
       </div>
 
       <article className="glass-panel p-4 sm:p-5">
@@ -46,7 +55,8 @@ export default function CustomerDashboardPage() {
         <div className="mt-4 space-y-3">
           {requests.map((request) => (
             <div key={request.id} className="rounded-xl border border-slate-200 bg-white/80 p-4">
-              <p className="font-semibold text-slate-700">{request.title}</p>
+              <p className="font-semibold text-slate-700">#{request.id} {request.serviceCategory}</p>
+              <p className="mt-2 text-sm text-slate-600 line-clamp-2">{request.problemDescription}</p>
               <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
                 <span>{new Date(request.createdAt).toLocaleDateString()}</span>
                 <span className="rounded-full bg-amber-100 px-2 py-1 font-semibold text-amber-700">

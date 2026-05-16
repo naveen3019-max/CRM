@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   classifyMessage,
   formatRoleLabel,
   parseLocationText,
   parseRequirementItems,
   parseScheduleText,
-  summarizeMessage
+  summarizeMessage,
+  getMessageDisplayText,
+  sortMessagesChronologically
 } from "../components/chatMessageUtils.js";
 import { RealtimeCRMChat } from "../components/RealtimeCRMChat.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -15,25 +17,23 @@ import { GroupList } from "../components/GroupList.jsx";
 import apiClient, { withAuth } from "../services/apiClient";
 import { connectChatSocket } from "../services/socketClient.js";
 import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const chatConfigByRole = {
   sales: {
     title: "Sales Chat",
     subtitle: "Manage customer conversations and lead follow-ups",
+    // Restrict sales to only chat with Admin per requirement
     scopes: [
-      { label: "Customers", value: "sales_customer" },
-      { label: "Vendors", value: "sales_vendor" },
-      { label: "Electricians", value: "sales_electrician" },
-      { label: "Admin", value: "admin_sales" }
+      { label: "Admin", value: "admin_sales" },
+      { label: "Field Work", value: "sales_field_work" }
     ]
   },
   customer: {
     title: "Customer Chat",
     subtitle: "Talk to support and track your service requests",
     scopes: [
-      { label: "Sales", value: "sales_customer" },
-      { label: "Vendors", value: "vendor_customer" },
-      { label: "Electricians", value: "customer_electrician" }
+      { label: "Admin", value: "admin_customer" }
     ]
   },
   vendor: {
@@ -49,9 +49,6 @@ const chatConfigByRole = {
     title: "Field Coordination Chat",
     subtitle: "Share updates and completion proofs with operations",
     scopes: [
-      { label: "Sales", value: "sales_electrician" },
-      { label: "Customers", value: "customer_electrician" },
-      { label: "Vendors", value: "vendor_electrician" },
       { label: "Admin", value: "admin_electrician" }
     ]
   },
@@ -66,6 +63,7 @@ const chatConfigByRole = {
 };
 
 export default function RoleChatPage({ role }) {
+  const { t } = useTranslation();
   const { token, user } = useAuth();
   const { selectedGroupId } = useGroup();
   const location = useLocation();
@@ -145,7 +143,7 @@ export default function RoleChatPage({ role }) {
       } catch (error) {
         if (!isDisposed && error?.code !== "ERR_CANCELED") {
           setContacts([]);
-          setChatError("Unable to load chat contacts right now.");
+          setChatError(t("chat.unableToLoadContacts"));
         }
       }
     }
@@ -250,10 +248,12 @@ export default function RoleChatPage({ role }) {
           return;
         }
 
-        const mapped = messagesResponse.data.data.map((message) => ({
-          ...message,
-          isMine: Number(message.senderId) === Number(user.id)
-        }));
+        const mapped = sortMessagesChronologically(
+          (messagesResponse.data.data || []).map((message) => ({
+            ...message,
+            isMine: Number(message.senderId) === Number(user.id)
+          }))
+        );
 
         setMessages(mapped);
       } catch (error) {
@@ -269,10 +269,10 @@ export default function RoleChatPage({ role }) {
         setMessages([]);
         setChatError(
           error?.response?.status === 429
-            ? "Too many chat requests right now. Please wait a few seconds and try again."
+            ? t("chat.tooManyRequests")
             : error?.response?.status === 403
-            ? "You don't have permission to chat with this contact in this scope."
-            : "Unable to load chat history right now."
+            ? t("chat.noPermissionForScope")
+            : t("chat.unableToLoadHistory")
         );
       } finally {
         if (!isDisposed && requestId === conversationRequestRef.current) {
@@ -287,6 +287,26 @@ export default function RoleChatPage({ role }) {
       isDisposed = true;
     };
   }, [chatUserId, activeScope, hasSelectedContact, token, user.id]);
+
+  const refreshConversationMessages = useCallback(async () => {
+    if (!token || !conversationId || !chatUserId) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.get(`/chat/conversations/${conversationId}/messages`, {
+        ...withAuth(token),
+        params: { _ts: Date.now() }
+      });
+      const mappedMessages = response.data.data.map((message) => ({
+        ...message,
+        isMine: Number(message.senderId) === Number(user.id)
+      }));
+      setMessages(mappedMessages);
+    } catch {
+      // Keep the current thread visible if refresh fails.
+    }
+  }, [chatUserId, conversationId, token, user.id]);
 
   useEffect(() => {
     if (!token || !conversationId) {
@@ -350,18 +370,31 @@ export default function RoleChatPage({ role }) {
 
       setMessages((prev) => {
         const incomingId = String(incomingMessage.id);
-        if (prev.some((entry) => String(entry.id) === incomingId)) {
-          return prev;
-        }
+        // replace existing message if present, otherwise append
+        let found = false;
+        const next = prev.map((m) => {
+          if (String(m.id) === incomingId) {
+            found = true;
+            return {
+              ...m,
+              ...incomingMessage,
+              id: incomingId,
+              isMine: Number(incomingMessage.senderId) === Number(user.id)
+            };
+          }
+          return m;
+        });
 
-        return [
+        if (found) return sortMessagesChronologically(next);
+
+        return sortMessagesChronologically([
           ...prev,
           {
             ...incomingMessage,
             id: incomingId,
             isMine: Number(incomingMessage.senderId) === Number(user.id)
           }
-        ];
+        ]);
       });
     };
 
@@ -523,7 +556,7 @@ export default function RoleChatPage({ role }) {
         });
       })
       .catch(() => {
-        setChatError("Message could not be sent.");
+        setChatError(t("chat.messageCouldNotBeSent"));
       })
       .finally(() => {
         setSendingMessage(false);
@@ -547,25 +580,6 @@ export default function RoleChatPage({ role }) {
     });
   };
 
-  const refreshConversationMessages = useCallback(async () => {
-    if (!token || !conversationId || !chatUserId) {
-      return;
-    }
-
-    try {
-      const response = await apiClient.get(`/chat/conversations/${conversationId}/messages`, {
-        ...withAuth(token),
-        params: { _ts: Date.now() }
-      });
-      const mappedMessages = response.data.data.map((message) => ({
-        ...message,
-        isMine: Number(message.senderId) === Number(user.id)
-      }));
-      setMessages(mappedMessages);
-    } catch {
-      // Keep the current thread visible if refresh fails.
-    }
-  }, [chatUserId, conversationId, token, user.id]);
 
   const handleMessagePinStateChanged = useCallback(
     async (messageId, pinned) => {
@@ -607,10 +621,12 @@ export default function RoleChatPage({ role }) {
           ...contact,
           lastMessagePreview:
             signal.preview ||
-            (isActive ? "Conversation ready" : `Message ${contact.name.split(" ")[0]} to continue coordination`),
+            (isActive
+              ? t("chat.conversationReady")
+              : t("chat.messageContactToContinue", { name: contact.name.split(" ")[0] })),
           lastMessageAt: signal.timestamp || contact.createdAt,
           unreadCount: signal.unreadCount ?? contact.unreadCount ?? 0,
-          statusText: presence?.isOnline ? "Active now" : isOnlineNow ? "Active now" : "Last seen recently"
+          statusText: presence?.isOnline ? t("chat.activeNow") : isOnlineNow ? t("chat.activeNow") : t("chat.lastSeenRecently")
         };
       }),
     [contacts, contactSignals, chatUserId, presenceByUser]
@@ -621,21 +637,22 @@ export default function RoleChatPage({ role }) {
     const locationMessage = reversedMessages.find((entry) => classifyMessage(entry) === "location");
     const scheduleMessage = reversedMessages.find((entry) => classifyMessage(entry) === "schedule");
     const requirementMessage = reversedMessages.find((entry) => classifyMessage(entry) === "requirement");
+    const preferredLang = user?.preferredLanguage || null;
 
     return {
       location: locationMessage
-        ? parseLocationText(locationMessage.messageBody)
+        ? parseLocationText(getMessageDisplayText(locationMessage, preferredLang))
         : selectedContact
-          ? `Project location pending for ${selectedContact.name}`
-          : "Location not shared",
+          ? t("chat.projectLocationPending", { name: selectedContact.name })
+          : t("chat.locationNotShared"),
       schedule: scheduleMessage
-        ? parseScheduleText(scheduleMessage.messageBody)
-        : "No visit scheduled",
+        ? parseScheduleText(getMessageDisplayText(scheduleMessage, preferredLang))
+        : t("chat.noVisitScheduled"),
       requirement: requirementMessage
-        ? parseRequirementItems(requirementMessage.messageBody)[0]
+        ? parseRequirementItems(getMessageDisplayText(requirementMessage, preferredLang))[0]
         : selectedContact
-          ? `Coordinate with ${formatRoleLabel(selectedContact.role)}`
-          : "Requirement pending"
+          ? t("chat.coordinateWithRole", { role: formatRoleLabel(selectedContact.role) })
+          : t("chat.requirementPending")
     };
   }, [messages, selectedContact]);
 
@@ -660,10 +677,8 @@ export default function RoleChatPage({ role }) {
             ) : (
               <div className="flex h-full min-h-[420px] items-center justify-center p-8 text-center text-slate-500">
                 <div className="max-w-sm">
-                  <p className="text-base font-semibold text-slate-800">Pick a group</p>
-                  <p className="mt-2 text-sm">
-                    Choose a group from the left panel or create a new one to start the conversation.
-                  </p>
+                  <p className="text-base font-semibold text-slate-800">{t("chat.pickAGroup")}</p>
+                  <p className="mt-2 text-sm">{t("chat.chooseGroupHint")}</p>
                 </div>
               </div>
             )}

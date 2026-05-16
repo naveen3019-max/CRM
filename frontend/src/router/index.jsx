@@ -7,6 +7,7 @@ import apiClient, { withAuth } from "../services/apiClient";
 const LoginPage = lazy(() => import("../pages/LoginPage.jsx"));
 const RegisterPage = lazy(() => import("../pages/RegisterPage.jsx"));
 const VerifyEmailPage = lazy(() => import("../pages/VerifyEmailPage.jsx"));
+const ProfileCompletionPage = lazy(() => import("../pages/ProfileCompletionPage.jsx"));
 const AdminDashboardPage = lazy(() => import("../pages/AdminDashboardPage.jsx"));
 const AdminChatPage = lazy(() => import("../pages/AdminChatPage.jsx"));
 const SalesDashboardPage = lazy(() => import("../pages/SalesDashboardPage.jsx"));
@@ -22,6 +23,7 @@ const CompanyAdminPage = lazy(() => import("../pages/onboarding/CompanyAdminPage
 const VendorRegisterPage = lazy(() => import("../pages/VendorRegisterPage.jsx"));
 const CommunicationPage = lazy(() => import("../pages/communication/CommunicationPage.jsx"));
 const ChatRedirectPage = lazy(() => import("../pages/ChatRedirectPage.jsx"));
+const ServiceRequestPage = lazy(() => import("../pages/ServiceRequestPage.jsx"));
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
@@ -158,6 +160,7 @@ export function AppRouter() {
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       <Route element={<ProtectedRoute />}>
+        <Route path="/profile-completion" element={<ProfileCompletionPage />} />
         <Route path="/onboarding" element={<CompanyOnboardingPage />} />
         <Route element={<RoleLayout />}>
           <Route path="/admin/verifications" element={<RoleRoute role="admin" element={<CompanyAdminPage />} />} />
@@ -171,6 +174,10 @@ export function AppRouter() {
           <Route
             path="/customer/chat"
             element={<RoleRoute role="customer" element={<RoleChatPage role="customer" />} />}
+          />
+          <Route
+            path="/customer/service-request/new"
+            element={<RoleRoute role="customer" element={<ServiceRequestPage />} />}
           />
           <Route path="/customer/profile" element={<RoleRoute role="customer" element={<ProfilePage />} />} />
           <Route
