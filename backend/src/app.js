@@ -56,6 +56,13 @@ app.get("/health", (req, res) => {
   });
 });
 
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "Verbena Tech API is running"
+  });
+});
+
 app.use("/api", apiRouter);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
