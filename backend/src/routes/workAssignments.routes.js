@@ -40,6 +40,13 @@ router.get(
   workAssignmentController.getMyCreatedAssignments
 );
 
+// Admin/Sales: List all assignments (with optional status, pagination)
+router.get(
+  "/all",
+  authorize(ROLES.ADMIN, ROLES.SALES),
+  workAssignmentController.getAllAssignments
+);
+
 // Get single assignment details
 router.get(
   "/:id",
@@ -77,13 +84,6 @@ router.patch(
   updateAssignmentStatusValidation,
   validateRequest,
   workAssignmentController.updateAssignmentStatus
-);
-
-// Admin/Sales: List all assignments (with optional status, pagination)
-router.get(
-  "/all",
-  authorize(ROLES.ADMIN, ROLES.SALES),
-  workAssignmentController.getAllAssignments
 );
 
 export default router;
