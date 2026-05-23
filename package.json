@@ -4,16 +4,35 @@
   "version": "1.0.0",
   "workspaces": [
     "backend",
-    "frontend"
+    "frontend",
+    "mobile"
   ],
   "scripts": {
     "dev": "concurrently \"npm --workspace backend run dev\" \"npm --workspace frontend run dev\"",
     "dev:backend": "npm --workspace backend run dev",
     "dev:frontend": "npm --workspace frontend run dev",
+    "dev:mobile": "npm --workspace mobile run start",
+    "install-all": "npm --workspace frontend install && npm --workspace backend install && npm --workspace mobile install",
     "build": "npm --workspace frontend run build",
-    "start": "npm --workspace backend run start"
+    "build:all": "npm run build",
+    "start": "npm --workspace backend run start",
+    "start:pm2": "pm2-runtime ecosystem.config.js",
+    "docker:build": "docker build -t verbena-app .",
+    "compose:up": "docker compose up -d --build"
   },
   "devDependencies": {
-    "concurrently": "^9.2.0"
+    "@types/jest": "^30.0.0",
+    "concurrently": "^9.2.0",
+    "expo-module-scripts": "^3.5.4"
+  },
+  "overrides": {
+    "react": "19.2.0",
+    "react-native": "0.83.6"
+  },
+  "dependencies": {
+    "expo": "~55.0.24",
+    "react": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-webview": "^13.16.1"
   }
 }

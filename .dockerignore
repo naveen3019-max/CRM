@@ -1,0 +1,14 @@
+node_modules
+frontend/node_modules
+backend/node_modules
+**/dist
+**/.git
+**/.env
+npm-debug.log
+Dockerfile
+docker-compose.yml
+.env.local
+.vscode
+.idea
+*.log
+uploads

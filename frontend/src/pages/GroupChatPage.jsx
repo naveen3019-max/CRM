@@ -20,7 +20,7 @@ import {
 
 export function GroupChatPage({ groupId }) {
   const { user, token } = useAuth();
-  const { groupMessages, updateGroupMessages, addGroupMessage } = useGroup();
+  const { groupMessages, updateGroupMessages, addGroupMessage, updateGroupUnreadCount } = useGroup();
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [isLoading, setIsLoading] = useState(Boolean(groupId));
@@ -61,6 +61,7 @@ export function GroupChatPage({ groupId }) {
 
     setIsLoading(true);
     setPinnedStateByMessageId({});
+    updateGroupUnreadCount(groupId, 0);
 
     const loadGroupInfo = async () => {
       try {
@@ -78,6 +79,7 @@ export function GroupChatPage({ groupId }) {
         setMembers(membersRes.data.data || []);
         setMessages(orderedMessages);
         updateGroupMessages(groupId, orderedMessages);
+        updateGroupUnreadCount(groupId, 0);
         await refreshPinnedMessages();
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load group");
@@ -87,7 +89,7 @@ export function GroupChatPage({ groupId }) {
     };
 
     loadGroupInfo();
-  }, [groupId, token, updateGroupMessages, refreshPinnedMessages]);
+  }, [groupId, token, updateGroupMessages, updateGroupUnreadCount, refreshPinnedMessages]);
 
   useEffect(() => {
     if (!highlightedMessageId) return;
@@ -125,6 +127,7 @@ export function GroupChatPage({ groupId }) {
 
         setMessages((previous) => sortMessagesChronologically([...previous, nextMessage]));
         addGroupMessage(groupId, nextMessage);
+        updateGroupUnreadCount(groupId, 0);
       }
     };
 
@@ -174,7 +177,7 @@ export function GroupChatPage({ groupId }) {
         clearTimeout(typingTimerRef.current);
       }
     };
-  }, [groupId, token, addGroupMessage, members, user?.id, refreshPinnedMessages]);
+  }, [groupId, token, addGroupMessage, members, user?.id, refreshPinnedMessages, updateGroupUnreadCount]);
 
   // Auto scroll to bottom
   useEffect(() => {

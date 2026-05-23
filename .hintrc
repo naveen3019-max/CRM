@@ -1,0 +1,8 @@
+{
+  "hints": {
+    "typescript-config/is-valid": "off"
+  },
+  "ignoredUrls": [
+    "**/node_modules/**"
+  ]
+}

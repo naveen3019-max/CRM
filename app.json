@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "c41af2bc-c671-4fbc-bd36-42d88d1f88c2"
+      }
+    },
+    "android": {
+      "package": "com.prnatechnologies.crm"
+    }
+  }
+}

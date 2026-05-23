@@ -24,11 +24,16 @@ export function GroupProvider({ children }) {
     }));
   }, []);
 
-  const updateGroupUnreadCount = useCallback((groupId, count) => {
-    setGroupUnreadCounts((prev) => ({
-      ...prev,
-      [groupId]: count,
-    }));
+  const updateGroupUnreadCount = useCallback((groupId, countOrUpdater) => {
+    setGroupUnreadCounts((prev) => {
+      const previousCount = prev[groupId] || 0;
+      const nextCount = typeof countOrUpdater === "function" ? countOrUpdater(previousCount) : countOrUpdater;
+
+      return {
+        ...prev,
+        [groupId]: nextCount,
+      };
+    });
   }, []);
 
   const updateGroups = useCallback((newGroups) => {

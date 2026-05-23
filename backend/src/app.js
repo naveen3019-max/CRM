@@ -1,14 +1,19 @@
 import compression from "compression";
 import cors from "cors";
 import express from "express";
+import fs from "fs";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
+import { fileURLToPath } from "url";
 import { env } from "./config/env.js";
 import { errorMiddleware, notFoundMiddleware } from "./middleware/error.middleware.js";
 import { apiRouter } from "./routes/index.js";
 import { createCorsOriginChecker } from "./utils/cors.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const isAllowedOrigin = createCorsOriginChecker(env.clientUrls);
@@ -62,6 +67,25 @@ app.get("/", (req, res) => {
     message: "Verbena Tech API is running"
   });
 });
+
+// Serve frontend static assets when built (single-app deployment)
+try {
+  const frontendDist = path.resolve(__dirname, "../../frontend/dist");
+  if (fs.existsSync(frontendDist)) {
+    app.use(express.static(frontendDist));
+
+    // SPA fallback: serve index.html for non-API routes
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api") || req.path.startsWith("/uploads") || req.path.startsWith("/socket.io")) {
+        return next();
+      }
+
+      res.sendFile(path.join(frontendDist, "index.html"));
+    });
+  }
+} catch (err) {
+  // ignore if frontend not present
+}
 
 app.use("/api", apiRouter);
 app.use(notFoundMiddleware);

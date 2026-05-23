@@ -4,7 +4,7 @@ import { X, Download, ArrowLeft, FileText } from 'lucide-react';
 export default function DocumentPreviewModal({ document, onClose, apiBaseUrl }) {
   if (!document) return null;
 
-  const fileUrl = `${apiBaseUrl || 'http://localhost:5000'}${document.file_url}`;
+  const fileUrl = `${apiBaseUrl || 'https://crm-i71p.onrender.com'}${document.file_url}`;
   const isPdf = document.file_url?.toLowerCase().endsWith('.pdf');
   const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(document.file_url);
 

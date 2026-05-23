@@ -230,6 +230,34 @@ This repository now includes [frontend/vercel.json](frontend/vercel.json) for SP
 
 If you use Vercel preview deployments, include preview origin support in Render CLIENT_URL.
 
+## Mobile App
+
+The repo now includes a React Native + Expo mobile app in [mobile](mobile).
+
+### Mobile setup
+
+1. Install dependencies:
+
+```bash
+npm run install-all
+```
+
+1. Configure the mobile API URL by copying [mobile/.env.example](mobile/.env.example) to [mobile/.env](mobile/.env) and updating `EXPO_PUBLIC_API_URL`.
+
+1. Start the app:
+
+```bash
+npm run dev:mobile
+```
+
+### Mobile features
+
+- Login with the existing backend auth API
+- Role-aware dashboard
+- Assignment list and assignment details
+- Attachment opening from backend URLs
+- Worker accept/reject actions and admin/sales status updates
+
 ## Upload Storage Note
 
 Chat images are stored on backend disk under uploads/. On Render free instances, local disk is ephemeral.
@@ -273,3 +301,27 @@ Password for seed users: ChangeMe@123
 ## Next Step
 
 Project is ready for cloud-hosting preparation (containerization, CI/CD, managed DB/storage, and environment hardening).
+
+## Dockerized Single-App (recommended)
+
+This repository includes a Docker multi-stage build and `docker-compose.yml` that builds the React frontend and runs the Express backend and Nginx proxy together.
+
+1. Copy `.env.example` to `.env` and fill values.
+2. Build and run:
+
+```bash
+docker compose up -d --build
+```
+
+1. Verify:
+
+- Backend health: `http://localhost:5000/health`
+- App: `http://localhost/`
+
+Notes:
+
+- `uploads/` and `logs/` are mounted from the host into the container; ensure these directories exist and are writable.
+- Nginx proxies `/api` and `/socket.io` to the backend and serves frontend via the backend.
+- For production TLS, terminate TLS at your load balancer or configure Nginx with certs and ports 443/80.
+
+If issues arise around Socket.IO connections, ensure any external LB or cloud provider allows websocket upgrades and forwards `Upgrade`/`Connection` headers.

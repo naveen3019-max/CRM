@@ -50,7 +50,7 @@ export default function LoginPage() {
       <div className="vt-split">
 
         {/* ── LEFT: About Verbena Tech ── */}
-        <aside className="vt-about vt-fadein" style={{ "--d": "0ms" }}>
+        <aside className="vt-about vt-fadein" style={{ "--d": "0ms", order: 1 }}>
           {/* Brand */}
           <div className="vt-brand">
             <span className="vt-brand-dot" />
@@ -110,7 +110,7 @@ export default function LoginPage() {
         </aside>
 
         {/* ── RIGHT: Sign-in card ── */}
-        <main className="vt-form-col">
+        <main className="vt-form-col" style={{ order: 2 }}>
           <div className="vt-card vt-fadein" style={{ "--d": "80ms" }}>
             <div className="vt-card-top">
               <div className="vt-card-icon-wrap">

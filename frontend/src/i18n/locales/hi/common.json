@@ -1,0 +1,36 @@
+{
+  "app": {
+    "loadingWorkspace": "वर्कस्पेस लोड हो रहा है...",
+    "openingChat": "चैट खोली जा रही है..."
+  },
+  "language": {
+    "label": "भाषा",
+    "select": "भाषा चुनें",
+    "updated": "भाषा अपडेट हो गई",
+    "saveFailed": "भाषा वरीयता सहेजने में असमर्थ",
+    "en": "English",
+    "hi": "हिंदी",
+    "kn": "ಕನ್ನಡ",
+    "te": "తెలుగు",
+    "ta": "தமிழ்",
+    "ml": "മലയാളം"
+  },
+  "auth": {
+    "signIn": "साइन इन",
+    "signInAction": "साइन इन",
+    "createAccount": "खाता बनाएं",
+    "registerHere": "यहां रजिस्टर करें",
+    "noAccount": "कोई खाता नहीं है?",
+    "alreadyAccount": "पहले से खाता है?",
+    "accessDashboard": "अपने CRM डैशबोर्ड में प्रवेश करें",
+    "joinPlatform": "Verbena Tech CRM प्लेटफ़ॉर्म से जुड़ें",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "fullName": "पूरा नाम",
+    "mobile": "मोबाइल नंबर",
+    "role": "भूमिका",
+    "speciality": "आपकी भूमिका / विशेषज्ञता",
+    "loginFailed": "लॉगिन विफल रहा। कृपया अपने क्रेडेंशियल जांचें.",
+    "registerFailed": "पंजीकरण विफल रहा। दूसरा ईमेल प्रयास करें।"
+  }
+}

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Search, Bell, User, LogOut, Settings, LayoutGrid, CheckCircle, Briefcase, Users, Handshake, Loader2, X, ChevronDown, Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiClient, { withAuth } from '../services/apiClient';
+import { connectSocket } from '../services/socketClient';
 import { formatRoleLabel } from './chatMessageUtils.js';
 import AssignmentModal from './AssignmentModal.jsx';
 
@@ -69,6 +70,27 @@ export default function GlobalHeader() {
       fetchNotifications();
     }
   }, [user, token]);
+
+  useEffect(() => {
+    if (user?.role !== 'admin' || !token) {
+      return;
+    }
+
+    const socket = connectSocket(token);
+    if (!socket) {
+      return;
+    }
+
+    const handleNotification = () => {
+      fetchNotifications();
+    };
+
+    socket.on('notification:new', handleNotification);
+
+    return () => {
+      socket.off('notification:new', handleNotification);
+    };
+  }, [token, user?.role]);
 
   const fetchNotifications = async () => {
     try {

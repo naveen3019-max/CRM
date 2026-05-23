@@ -1,0 +1,36 @@
+{
+  "app": {
+    "loadingWorkspace": "Loading workspace...",
+    "openingChat": "Opening chat..."
+  },
+  "language": {
+    "label": "Language",
+    "select": "Select language",
+    "updated": "Language updated",
+    "saveFailed": "Unable to save language preference",
+    "en": "English",
+    "hi": "Hindi",
+    "kn": "Kannada",
+    "te": "Telugu",
+    "ta": "Tamil",
+    "ml": "Malayalam"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signInAction": "Sign In",
+    "createAccount": "Create Account",
+    "registerHere": "Register here",
+    "noAccount": "No account?",
+    "alreadyAccount": "Already have an account?",
+    "accessDashboard": "Access your CRM dashboard",
+    "joinPlatform": "Join Verbena Tech's CRM platform",
+    "email": "Email",
+    "password": "Password",
+    "fullName": "Full Name",
+    "mobile": "Mobile Number",
+    "role": "Role",
+    "speciality": "Your Role / Specialty",
+    "loginFailed": "Login failed. Please check your credentials.",
+    "registerFailed": "Registration failed. Try another email."
+  }
+}

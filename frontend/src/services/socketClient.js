@@ -24,7 +24,8 @@ export function connectSocket(token) {
   activeToken = token;
   socket = io(resolveSocketServerUrl(), {
     withCredentials: true,
-    transports: ["websocket", "polling"],
+    transports: ["polling"],
+    upgrade: false,
     auth: {
       token
     }
