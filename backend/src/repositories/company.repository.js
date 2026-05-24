@@ -23,6 +23,15 @@ export async function findCompanyByUserId(userId) {
   return rows[0];
 }
 
+export async function linkCompanyToUserId(companyId, userId) {
+  await pool.query(
+    `UPDATE companies
+     SET user_id = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [userId, companyId]
+  );
+}
+
 export async function updateCompanyInfo(id, data) {
   await pool.query(
     `UPDATE companies SET 

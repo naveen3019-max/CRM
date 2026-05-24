@@ -16,6 +16,12 @@ async function ensureCompanyProfile(userId) {
     throw new ApiError(404, "User not found");
   }
 
+  const companyByEmail = await companyRepo.findCompanyByEmail(user.email);
+  if (companyByEmail) {
+    await companyRepo.linkCompanyToUserId(companyByEmail.id, userId);
+    return await companyRepo.findCompanyByUserId(userId);
+  }
+
   const companyId = await companyRepo.createCompanyProfile({
     userId,
     name: user.name,
