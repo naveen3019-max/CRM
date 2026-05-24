@@ -195,8 +195,13 @@
   width: 100%;
 }
 
-.bubble-row.own { items-end: true; }
-.bubble-row.other { items-start: true; }
+.bubble-row.own {
+  align-items: flex-end;
+}
+
+.bubble-row.other {
+  align-items: flex-start;
+}
 
 .msg-bubble {
   max-width: 70%;
