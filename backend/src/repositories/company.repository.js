@@ -2,6 +2,51 @@ import { pool } from "../config/db.js";
 
 let companyUserIdColumnChecked = false;
 let companyUserIdColumnExists = false;
+let companyOnboardingColumnsChecked = false;
+
+async function ensureCompanyOnboardingColumns() {
+  if (companyOnboardingColumnsChecked) {
+    return;
+  }
+
+  const columnsToEnsure = [
+    ["user_id", "BIGINT UNSIGNED NULL AFTER id"],
+    ["service_type", "VARCHAR(255) AFTER name"],
+    ["description", "TEXT AFTER service_type"],
+    ["years_of_experience", "INT AFTER description"],
+    ["city", "VARCHAR(100) AFTER address"],
+    ["state", "VARCHAR(100) AFTER city"],
+    ["pincode", "VARCHAR(10) AFTER state"],
+    ["alternate_phone", "VARCHAR(20) AFTER phone"],
+    ["business_email", "VARCHAR(255) AFTER alternate_phone"],
+    ["website", "VARCHAR(255) AFTER business_email"]
+  ];
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'companies'"
+    );
+    const existingColumns = new Set((rows || []).map((row) => row.COLUMN_NAME));
+
+    for (const [columnName, definition] of columnsToEnsure) {
+      if (existingColumns.has(columnName)) {
+        continue;
+      }
+
+      try {
+        await pool.query(`ALTER TABLE companies ADD COLUMN ${columnName} ${definition}`);
+      } catch (err) {
+        if (err?.code !== "ER_DUP_FIELDNAME") {
+          throw err;
+        }
+      }
+    }
+  } catch (err) {
+    // If schema inspection fails, let the write query report the real error.
+  }
+
+  companyOnboardingColumnsChecked = true;
+}
 
 async function ensureCompanyUserIdColumnState() {
   if (companyUserIdColumnChecked) {
@@ -64,6 +109,8 @@ export async function linkCompanyToUserId(companyId, userId) {
 }
 
 export async function updateCompanyInfo(id, data) {
+  await ensureCompanyOnboardingColumns();
+
   await pool.query(
     `UPDATE companies SET 
       service_type = ?, 
