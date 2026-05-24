@@ -176,6 +176,14 @@ function RoleLayoutContent() {
     };
   }, [isAuthenticated, token, fetchUnreadCount, selectedGroupId, showLiveBanner, updateGroupUnreadCount]);
 
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-medium text-slate-500">
+        Signing out...
+      </div>
+    );
+  }
+
   const shell = isChatRoute ? (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50 lg:grid lg:grid-cols-[260px_1fr]">
       <RoleSidebar role={user.role} user={user} onLogout={logout} chatMode />
@@ -194,14 +202,6 @@ function RoleLayoutContent() {
       </main>
     </div>
   );
-
-  if (!isAuthenticated || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-medium text-slate-500">
-        Signing out...
-      </div>
-    );
-  }
 
   return (
     <>
