@@ -5,7 +5,7 @@ import * as companyRepo from "../repositories/company.repository.js";
 import { findUserById } from "../repositories/user.repository.js";
 import { createVendorVerificationNotification } from "./notifications.service.js";
 
-async function ensureCompanyProfile(userId) {
+async function ensureCompanyProfile(userId, email) {
   const existingCompany = await companyRepo.findCompanyByUserId(userId);
   if (existingCompany) {
     return existingCompany;
@@ -16,10 +16,11 @@ async function ensureCompanyProfile(userId) {
     throw new ApiError(404, "User not found");
   }
 
-  const companyByEmail = await companyRepo.findCompanyByEmail(user.email);
+  const lookupEmail = email || user.email;
+  const companyByEmail = await companyRepo.findCompanyByEmail(lookupEmail);
   if (companyByEmail) {
     await companyRepo.linkCompanyToUserId(companyByEmail.id, userId);
-    return await companyRepo.findCompanyByUserId(userId);
+    return (await companyRepo.findCompanyByUserId(userId)) || companyByEmail;
   }
 
   const companyId = await companyRepo.createCompanyProfile({
@@ -73,8 +74,8 @@ export async function loginCompany(payload) {
   return { token, company };
 }
 
-export async function updateBusinessInfo(userId, payload) {
-  const company = await ensureCompanyProfile(userId);
+export async function updateBusinessInfo(userId, email, payload) {
+  const company = await ensureCompanyProfile(userId, email);
   if (!company) {
     throw new ApiError(404, "Company profile not found");
   }
@@ -112,15 +113,15 @@ export async function updateBusinessInfo(userId, payload) {
   return { success: true };
 }
 
-export async function saveDocument(userId, docType, fileUrl, fileName) {
-  const company = await ensureCompanyProfile(userId);
+export async function saveDocument(userId, email, docType, fileUrl, fileName) {
+  const company = await ensureCompanyProfile(userId, email);
   if (!company) throw new ApiError(404, "Company profile not found");
   await companyRepo.saveCompanyDocument(company.id, docType, fileUrl, fileName);
   return { success: true };
 }
 
-export async function getCompanyStatus(userId) {
-  const company = await companyRepo.findCompanyByUserId(userId);
+export async function getCompanyStatus(userId, email) {
+  const company = (await companyRepo.findCompanyByUserId(userId)) || (email ? await companyRepo.findCompanyByEmail(email) : null);
   if (!company) return { status: 'not_started' };
   
   const documents = await companyRepo.getCompanyDocuments(company.id);

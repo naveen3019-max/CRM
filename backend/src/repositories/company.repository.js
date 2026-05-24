@@ -1,5 +1,26 @@
 import { pool } from "../config/db.js";
 
+let companyUserIdColumnChecked = false;
+let companyUserIdColumnExists = false;
+
+async function ensureCompanyUserIdColumnState() {
+  if (companyUserIdColumnChecked) {
+    return companyUserIdColumnExists;
+  }
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'companies' AND COLUMN_NAME = 'user_id'"
+    );
+    companyUserIdColumnExists = Number(rows?.[0]?.cnt || 0) > 0;
+  } catch (err) {
+    companyUserIdColumnExists = false;
+  }
+
+  companyUserIdColumnChecked = true;
+  return companyUserIdColumnExists;
+}
+
 export async function createCompany(data) {
   const [result] = await pool.query(
     "INSERT INTO companies (name, email, password_hash) VALUES (?, ?, ?)",
@@ -19,11 +40,21 @@ export async function findCompanyById(id) {
 }
 
 export async function findCompanyByUserId(userId) {
+  const hasUserIdColumn = await ensureCompanyUserIdColumnState();
+  if (!hasUserIdColumn) {
+    return null;
+  }
+
   const [rows] = await pool.query("SELECT * FROM companies WHERE user_id = ?", [userId]);
   return rows[0];
 }
 
 export async function linkCompanyToUserId(companyId, userId) {
+  const hasUserIdColumn = await ensureCompanyUserIdColumnState();
+  if (!hasUserIdColumn) {
+    return;
+  }
+
   await pool.query(
     `UPDATE companies
      SET user_id = ?, updated_at = CURRENT_TIMESTAMP
@@ -66,10 +97,13 @@ export async function updateCompanyInfo(id, data) {
 }
 
 export async function createCompanyProfile(data) {
-  const [result] = await pool.query(
-    "INSERT INTO companies (user_id, name, email) VALUES (?, ?, ?)",
-    [data.userId, data.name, data.email]
-  );
+  const hasUserIdColumn = await ensureCompanyUserIdColumnState();
+  const query = hasUserIdColumn
+    ? "INSERT INTO companies (user_id, name, email) VALUES (?, ?, ?)"
+    : "INSERT INTO companies (name, email) VALUES (?, ?)";
+  const values = hasUserIdColumn ? [data.userId, data.name, data.email] : [data.name, data.email];
+
+  const [result] = await pool.query(query, values);
   return result.insertId;
 }
 

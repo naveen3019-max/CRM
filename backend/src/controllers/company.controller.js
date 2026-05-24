@@ -12,7 +12,7 @@ export const login = asyncHandler(async (req, res) => {
 });
 
 export const updateBusiness = asyncHandler(async (req, res) => {
-  const result = await companyService.updateBusinessInfo(req.user.id, req.body);
+  const result = await companyService.updateBusinessInfo(req.user.id, req.user.email, req.body);
   res.json({ success: true, data: result });
 });
 
@@ -28,11 +28,11 @@ export const uploadDoc = asyncHandler(async (req, res) => {
   
   const fileUrl = `/uploads/${req.file.filename}`;
   
-  await companyService.saveDocument(req.user.id, docType, fileUrl, req.file.originalname);
+  await companyService.saveDocument(req.user.id, req.user.email, docType, fileUrl, req.file.originalname);
   res.json({ success: true, data: { fileUrl } });
 });
 
 export const getStatus = asyncHandler(async (req, res) => {
-  const result = await companyService.getCompanyStatus(req.user.id);
+  const result = await companyService.getCompanyStatus(req.user.id, req.user.email);
   res.json({ success: true, data: result });
 });
