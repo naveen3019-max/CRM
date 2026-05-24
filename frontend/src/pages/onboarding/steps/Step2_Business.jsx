@@ -23,7 +23,7 @@ export default function Step2_Location({ formData, setFormData, onNext, onBack }
           ></textarea>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="form-group">
             <label className="form-label">City</label>
             <input 
@@ -58,7 +58,7 @@ export default function Step2_Location({ formData, setFormData, onNext, onBack }
           />
         </div>
 
-        <div className="p-6 border border-[#E5E7EB] border-dashed rounded-2xl bg-[#F8FAFC] flex flex-col items-center justify-center gap-2">
+        <div className="p-4 sm:p-6 border border-[#E5E7EB] border-dashed rounded-2xl bg-[#F8FAFC] flex flex-col items-center justify-center gap-2 text-center">
           <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-[#2563EB]">
             <MapPin size={20} />
           </div>
@@ -67,17 +67,17 @@ export default function Step2_Location({ formData, setFormData, onNext, onBack }
           <button type="button" className="mt-2 text-xs font-bold text-[#2563EB] hover:underline">Open Map Picker</button>
         </div>
 
-        <div className="pt-4 flex justify-between items-center">
+        <div className="pt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between sm:items-center">
           <button 
             onClick={onBack}
-            className="onboarding-btn btn-outline flex items-center gap-2"
+            className="onboarding-btn btn-outline flex w-full items-center gap-2 sm:w-auto"
           >
             <ArrowLeft size={18} /> Back
           </button>
           <button 
             onClick={onNext}
             disabled={!canContinue}
-            className="onboarding-btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="onboarding-btn btn-primary flex w-full items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
           >
             Next Step <ArrowRight size={18} />
           </button>

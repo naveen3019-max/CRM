@@ -105,24 +105,24 @@ export default function Step4_Upload({ formData, setFormData, onNext, onBack }) 
           const isUploading = uploading === cat.key;
 
           return (
-            <div key={cat.key} className="p-4 border border-[#E5E7EB] rounded-2xl bg-white shadow-sm flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
+            <div key={cat.key} className="p-4 border border-[#E5E7EB] rounded-2xl bg-white shadow-sm flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${doc ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
                   {doc ? <CheckCircle2 size={20} /> : <FileText size={20} />}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-semibold text-[#111827]">
                     {cat.label} {cat.required && <span className="text-red-500">*</span>}
                   </p>
                   {doc ? (
-                    <p className="text-xs text-[#64748B] truncate max-w-[200px]">{doc.file_name}</p>
+                    <p className="text-xs text-[#64748B] break-words sm:truncate sm:max-w-[200px]">{doc.file_name}</p>
                   ) : (
                     <p className="text-xs text-[#64748B]">No file uploaded yet</p>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-start sm:self-auto">
                 {doc ? (
                   <>
                     <button 
@@ -152,17 +152,17 @@ export default function Step4_Upload({ formData, setFormData, onNext, onBack }) 
           );
         })}
 
-        <div className="pt-6 flex justify-between items-center">
+        <div className="pt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between sm:items-center">
           <button 
             onClick={onBack}
-            className="onboarding-btn btn-outline flex items-center gap-2"
+            className="onboarding-btn btn-outline flex w-full items-center gap-2 sm:w-auto"
           >
             <ArrowLeft size={18} /> Back
           </button>
           <button 
             onClick={onNext}
             disabled={!canContinue || !!uploading}
-            className="onboarding-btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="onboarding-btn btn-primary flex w-full items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
           >
             Next Step <ArrowRight size={18} />
           </button>

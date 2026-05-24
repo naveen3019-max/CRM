@@ -212,5 +212,9 @@ function RoleLayoutContent() {
 }
 
 export function RoleLayout() {
-  return <RoleLayoutContent />;
+  return (
+    <GroupProvider>
+      <RoleLayoutContent />
+    </GroupProvider>
+  );
 }

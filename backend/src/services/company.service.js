@@ -2,7 +2,28 @@ import bcrypt from "bcryptjs";
 import { ApiError } from "../utils/ApiError.js";
 import { signAccessToken } from "../utils/jwt.js";
 import * as companyRepo from "../repositories/company.repository.js";
+import { findUserById } from "../repositories/user.repository.js";
 import { createVendorVerificationNotification } from "./notifications.service.js";
+
+async function ensureCompanyProfile(userId) {
+  const existingCompany = await companyRepo.findCompanyByUserId(userId);
+  if (existingCompany) {
+    return existingCompany;
+  }
+
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const companyId = await companyRepo.createCompanyProfile({
+    userId,
+    name: user.name,
+    email: user.email
+  });
+
+  return await companyRepo.findCompanyById(companyId);
+}
 
 export async function registerCompany(payload) {
   const existing = await companyRepo.findCompanyByEmail(payload.email);
@@ -47,14 +68,31 @@ export async function loginCompany(payload) {
 }
 
 export async function updateBusinessInfo(userId, payload) {
-  const company = await companyRepo.findCompanyByUserId(userId);
+  const company = await ensureCompanyProfile(userId);
   if (!company) {
     throw new ApiError(404, "Company profile not found");
   }
   
   const wasNotPending = company.status !== 'pending';
-  await companyRepo.updateCompanyInfo(company.id, payload);
-  
+  try {
+    await companyRepo.updateCompanyInfo(company.id, payload);
+  } catch (err) {
+    // Log detailed context to help diagnose 500s in production (sanitized)
+    const safePayload = {
+      service_type: payload.service_type,
+      description: payload.description ? '[REDACTED]' : undefined,
+      years_of_experience: payload.years_of_experience,
+      city: payload.city,
+      state: payload.state,
+      pincode: payload.pincode,
+      phone: payload.phone,
+      business_email: payload.business_email,
+      website: payload.website
+    };
+    console.error("Failed updating company info for companyId=", company.id, "userId=", userId, "payload=", JSON.stringify(safePayload), "error=", err && err.stack ? err.stack : err);
+    throw err; // let error middleware convert to 500 and log
+  }
+
   // If this is the first submission (moving from null/rejected to pending), create notification
   if (wasNotPending && company.user_id) {
     try {
@@ -69,7 +107,7 @@ export async function updateBusinessInfo(userId, payload) {
 }
 
 export async function saveDocument(userId, docType, fileUrl, fileName) {
-  const company = await companyRepo.findCompanyByUserId(userId);
+  const company = await ensureCompanyProfile(userId);
   if (!company) throw new ApiError(404, "Company profile not found");
   await companyRepo.saveCompanyDocument(company.id, docType, fileUrl, fileName);
   return { success: true };
