@@ -1,9 +1,11 @@
 import React from 'react';
 import { Clock, CheckCircle2, XCircle, RefreshCw, LogOut } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function Step5_Status({ formData, onReuploadDocuments }) {
   const { logout } = useAuth();
+  const navigate = useNavigate();
   const status = formData.status || 'pending';
   const rejectionReason = formData.rejection_reason || 'Information provided is incomplete or incorrect.';
 
@@ -18,7 +20,7 @@ export default function Step5_Status({ formData, onReuploadDocuments }) {
             <h2 className="text-2xl font-bold text-[#111827] mb-2">Account Verified!</h2>
             <p className="text-[#64748B] mb-8">Your account is verified. You can now access all features.</p>
             <button 
-              onClick={() => window.location.href = '/vendor'}
+              onClick={() => navigate('/vendor', { replace: true })}
               className="onboarding-btn bg-[#2563EB] text-white px-8 hover:bg-[#1D4ED8] transition-all shadow-lg shadow-[#2563EB]/20"
             >
               Go to Dashboard
@@ -43,7 +45,7 @@ export default function Step5_Status({ formData, onReuploadDocuments }) {
               <p className="text-sm text-[#64748B] mb-3">
                 Replace any incorrect files and submit the onboarding form again.
               </p>
-              <button
+              <button 
                 onClick={() => onReuploadDocuments ? onReuploadDocuments() : window.location.reload()}
                 className="onboarding-btn btn-outline flex items-center gap-2 mx-auto"
               >
@@ -73,7 +75,7 @@ export default function Step5_Status({ formData, onReuploadDocuments }) {
               <button 
                 onClick={() => {
                   logout();
-                  window.location.href = '/';
+                  navigate('/', { replace: true });
                 }}
                 className="text-sm font-semibold text-[#64748B] hover:text-[#111827] flex items-center justify-center gap-1 mt-4"
               >
