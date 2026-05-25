@@ -111,5 +111,9 @@ export const env = {
   dbConnectRetries: parsePositiveInteger(process.env.DB_CONNECT_RETRIES, 5),
   dbConnectRetryDelayMs: parsePositiveInteger(process.env.DB_CONNECT_RETRY_DELAY_MS, 1500),
   allowStartWithoutDb: parseBoolean(process.env.ALLOW_START_WITHOUT_DB, false),
-  uploadDir: resolvedUploadDir
+  uploadDir: resolvedUploadDir,
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || "",
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || "",
+  cloudinaryFolder: process.env.CLOUDINARY_FOLDER || "verbena/company-documents"
 };

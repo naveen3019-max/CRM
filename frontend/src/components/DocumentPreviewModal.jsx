@@ -1,12 +1,14 @@
 import React from 'react';
 import { X, Download, ArrowLeft, FileText } from 'lucide-react';
+import { resolveDocumentUrl } from '../utils/documentUrl.js';
 
 export default function DocumentPreviewModal({ document, onClose, apiBaseUrl }) {
   if (!document) return null;
 
-  const fileUrl = `${apiBaseUrl || 'https://crm-i71p.onrender.com'}${document.file_url}`;
-  const isPdf = document.file_url?.toLowerCase().endsWith('.pdf');
-  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(document.file_url);
+  const fileUrl = resolveDocumentUrl(document.file_url, apiBaseUrl);
+  const sourceUrl = String(document.file_url || fileUrl || '').toLowerCase();
+  const isPdf = sourceUrl.endsWith('.pdf');
+  const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(sourceUrl);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

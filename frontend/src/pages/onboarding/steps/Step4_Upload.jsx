@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Upload, X, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { companyApi } from '../../../services/companyApi';
+import { resolveDocumentUrl } from '../../../utils/documentUrl.js';
 
 export default function Step4_Upload({ formData, setFormData, onNext, onBack }) {
   const [uploading, setUploading] = useState(null);
@@ -131,7 +132,7 @@ export default function Step4_Upload({ formData, setFormData, onNext, onBack }) 
                     >
                       <X size={16} />
                     </button>
-                    <a href={doc.file_url} target="_blank" rel="noreferrer" className="text-xs font-bold text-[#2563EB] hover:underline px-2">Preview</a>
+                    <a href={resolveDocumentUrl(doc.file_url)} target="_blank" rel="noreferrer" className="text-xs font-bold text-[#2563EB] hover:underline px-2">Preview</a>
                   </>
                 ) : (
                   <label className="cursor-pointer">

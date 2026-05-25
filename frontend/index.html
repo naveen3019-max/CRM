@@ -1,16 +1,16 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Verbena Tech Platform</title>
     <script>
+      // Earliest possible guard: define a harmless global `start` before any other script runs.
+      // Keep this minimal and placed as the first script to avoid ReferenceError from injected callers.
       (function () {
         if (typeof window !== "undefined" && typeof window.start !== "function") {
           window.start = function () {};
-          if (typeof globalThis !== "undefined") {
-            globalThis.start = window.start;
-          }
+          if (typeof globalThis !== "undefined") globalThis.start = window.start;
         }
 
         if (typeof window !== "undefined") {

@@ -72,10 +72,38 @@ export default function Step5_Status({ formData, onReuploadDocuments }) {
               >
                 <RefreshCw size={18} /> Refresh Status
               </button>
-              <button 
+              <button
                 onClick={() => {
-                  logout();
-                  navigate('/', { replace: true });
+                  try {
+                    // perform logout and navigate after a short delay to avoid
+                    // race conditions where route changes before state settles
+                    logout();
+                  } catch (err) {
+                    // ensure any unexpected errors don't crash the UI on mobile webviews
+                    console.error("logout error:", err);
+                  }
+
+                  // navigate on the next tick (or fallback to full reload)
+                  try {
+                    setTimeout(() => {
+                      try {
+                        navigate('/', { replace: true });
+                      } catch (err) {
+                        // fallback: force a hard reload to root
+                        try {
+                          window.location.href = '/';
+                        } catch (e) {
+                          /* swallow */
+                        }
+                      }
+                    }, 60);
+                  } catch (err) {
+                    try {
+                      window.location.href = '/';
+                    } catch (e) {
+                      /* swallow */
+                    }
+                  }
                 }}
                 className="text-sm font-semibold text-[#64748B] hover:text-[#111827] flex items-center justify-center gap-1 mt-4"
               >

@@ -1,16 +1,15 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Verbena Tech Platform</title>
     <script>
+      // Early no-op `start` guard to prevent ReferenceError in embedded webviews.
       (function () {
         if (typeof window !== "undefined" && typeof window.start !== "function") {
           window.start = function () {};
-          if (typeof globalThis !== "undefined") {
-            globalThis.start = window.start;
-          }
+          if (typeof globalThis !== "undefined") globalThis.start = window.start;
         }
       })();
     </script>

@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Eye, Check, X, FileText, Download, Loader2, ArrowLeft, Building, MapPin, Phone, Mail, MessageSquare } from 'lucide-react';
 import { companyApi } from '../../services/companyApi';
 import DocumentPreviewModal from '../../components/DocumentPreviewModal';
-import { API_ORIGIN } from '../../services/runtimeConfig.js';
+import { resolveDocumentUrl } from '../../utils/documentUrl.js';
 import '../../styles/onboarding.css';
-
-const API_BASE_URL = API_ORIGIN;
 
 export default function CompanyAdminPage() {
   const [companies, setCompanies] = useState([]);
@@ -272,7 +270,7 @@ export default function CompanyAdminPage() {
                             <Eye size={18} />
                           </button>
                           <a 
-                            href={`${API_BASE_URL}${doc.file_url}`} 
+                            href={resolveDocumentUrl(doc.file_url)} 
                             download
                             className="p-2 text-[#64748B] hover:text-[#2563EB] hover:bg-[#2563EB]/5 rounded-lg transition-all"
                             title="Download document"
@@ -338,7 +336,7 @@ export default function CompanyAdminPage() {
         <DocumentPreviewModal
           document={selectedDocument}
           onClose={() => setSelectedDocument(null)}
-          apiBaseUrl={API_BASE_URL}
+          apiBaseUrl={undefined}
         />
       )}
     </div>
