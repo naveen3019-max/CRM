@@ -53,6 +53,7 @@ app.use(
   })
 );
 
+app.use("/api", apiRouter);
 app.use("/uploads", express.static(path.resolve(env.uploadDir)));
 app.get("/health", (req, res) => {
   res.json({
@@ -87,7 +88,6 @@ try {
   // ignore if frontend not present
 }
 
-app.use("/api", apiRouter);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 

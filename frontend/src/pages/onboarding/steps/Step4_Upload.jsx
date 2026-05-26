@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Upload, X, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { companyApi } from '../../../services/companyApi';
-import { resolveDocumentUrl } from '../../../utils/documentUrl.js';
+import DocumentPreviewModal from '../../../components/DocumentPreviewModal';
 
 export default function Step4_Upload({ formData, setFormData, onNext, onBack }) {
   const [uploading, setUploading] = useState(null);
   const [uploadError, setUploadError] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
 
   const docCategories = [
     { key: 'gst_certificate', label: 'GST Certificate', required: true },
@@ -127,12 +128,19 @@ export default function Step4_Upload({ formData, setFormData, onNext, onBack }) 
                 {doc ? (
                   <>
                     <button 
+                      type="button"
                       onClick={() => removeDoc(cat.key)}
                       className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
                     >
                       <X size={16} />
                     </button>
-                    <a href={resolveDocumentUrl(doc.file_url)} target="_blank" rel="noreferrer" className="text-xs font-bold text-[#2563EB] hover:underline px-2">Preview</a>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDocument(doc)}
+                      className="text-xs font-bold text-[#2563EB] hover:underline px-2"
+                    >
+                      Preview
+                    </button>
                   </>
                 ) : (
                   <label className="cursor-pointer">
@@ -169,6 +177,14 @@ export default function Step4_Upload({ formData, setFormData, onNext, onBack }) 
           </button>
         </div>
       </div>
+
+      {selectedDocument && (
+        <DocumentPreviewModal
+          document={selectedDocument}
+          onClose={() => setSelectedDocument(null)}
+          apiBaseUrl={undefined}
+        />
+      )}
     </div>
   );
 }
