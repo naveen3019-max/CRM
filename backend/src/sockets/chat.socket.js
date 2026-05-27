@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { emitToAll, emitToUser, getOnlineUserIds, markUserConnected, markUserDisconnected } from "./state.js";
+import { normalizeRole } from "../utils/roleUtils.js";
 
 export function registerChatSocket(io) {
   io.use((socket, next) => {
@@ -13,7 +14,7 @@ export function registerChatSocket(io) {
       const payload = jwt.verify(token, env.jwtSecret);
       socket.user = {
         id: Number(payload.sub),
-        role: payload.role
+        role: normalizeRole(payload.role)
       };
 
       return next();

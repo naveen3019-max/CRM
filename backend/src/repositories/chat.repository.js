@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import { expandChatRoles } from "../utils/roleUtils.js";
 
 let translationColumnsReady = false;
 
@@ -242,7 +243,8 @@ export async function listContactsWithUnreadCounts(scope, receiverId, roles = []
     return [];
   }
 
-  const rolePlaceholders = roles.map(() => "?").join(", ");
+  const expandedRoles = expandChatRoles(roles);
+  const rolePlaceholders = expandedRoles.map(() => "?").join(", ");
   const query = `
     SELECT 
       u.id, u.name, u.email, u.role, u.is_active AS isActive, u.created_at AS createdAt,
@@ -258,7 +260,7 @@ export async function listContactsWithUnreadCounts(scope, receiverId, roles = []
     WHERE u.role IN (${rolePlaceholders}) AND u.is_active = 1
   `;
 
-  const values = [scope, receiverId, ...roles];
+  const values = [scope, receiverId, ...expandedRoles];
 
   let finalQuery = query;
   if (excludedUserId) {

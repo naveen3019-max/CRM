@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import { expandChatRoles } from "../utils/roleUtils.js";
 
 let _serviceCategoryChecked = false;
 let _isOnlineChecked = false;
@@ -153,8 +154,9 @@ export async function listUsersByRoles(roles = [], excludedUserId = null) {
     return [];
   }
 
-  const placeholders = roles.map(() => "?").join(", ");
-  const values = [...roles];
+  const expandedRoles = expandChatRoles(roles);
+  const placeholders = expandedRoles.map(() => "?").join(", ");
+  const values = [...expandedRoles];
   let query =
     `SELECT id, name, email, role, phone, mobile, is_active AS isActive, created_at AS createdAt
      FROM users
@@ -181,8 +183,9 @@ export async function searchUsersByRoles({ roles = [], excludedUserId = null, lo
   await ensureIsOnlineColumnExists();
   await ensureLastSeenColumnExists();
 
-  const queryParts = ["u.role IN (" + roles.map(() => "?").join(", ") + ")"];
-  const values = [...roles];
+  const expandedRoles = expandChatRoles(roles);
+  const queryParts = ["u.role IN (" + expandedRoles.map(() => "?").join(", ") + ")"];
+  const values = [...expandedRoles];
 
   if (excludedUserId) {
     queryParts.push("u.id <> ?");

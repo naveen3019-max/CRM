@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
+import { normalizeRole } from "../utils/roleUtils.js";
 
 export function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -15,7 +16,7 @@ export function authenticate(req, res, next) {
     const payload = jwt.verify(token, env.jwtSecret);
     req.user = {
       id: payload.sub,
-      role: payload.role,
+      role: normalizeRole(payload.role),
       email: payload.email
     };
     next();

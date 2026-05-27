@@ -23,33 +23,44 @@ const chatConfigByRole = {
   sales: {
     title: "Sales Chat",
     subtitle: "Manage customer conversations and lead follow-ups",
-    // Restrict sales to only chat with Admin per requirement
     scopes: [
       { label: "Admin", value: "admin_sales" },
-      { label: "Field Work", value: "sales_field_work" }
+      { label: "Customers", value: "sales_customer" },
+      { label: "Field Work", value: "sales_field_work" },
+      { label: "Vendors", value: "sales_vendor" },
+      { label: "Electricians", value: "sales_electrician" },
+      { label: "Service Professionals", value: "sales_service_professional" }
     ]
   },
   customer: {
     title: "Customer Chat",
     subtitle: "Talk to support and track your service requests",
     scopes: [
-      { label: "Admin", value: "admin_customer" }
+      { label: "Admin", value: "admin_customer" },
+      { label: "Sales", value: "sales_customer" },
+      { label: "Vendors", value: "vendor_customer" },
+      { label: "Electricians", value: "customer_electrician" }
     ]
   },
   vendor: {
     title: "Vendor Chat",
     subtitle: "Coordinate dispatch updates with operations",
     scopes: [
+      { label: "Customers", value: "vendor_customer" },
       { label: "Electricians", value: "vendor_electrician" },
       { label: "Field Work", value: "vendor_field_work" },
-      { label: "Admin", value: "admin_vendor" }
+      { label: "Admin", value: "admin_vendor" },
+      { label: "Service Professionals", value: "vendor_service_professional" }
     ]
   },
   electrician: {
     title: "Field Coordination Chat",
     subtitle: "Share updates and completion proofs with operations",
     scopes: [
-      { label: "Admin", value: "admin_electrician" }
+      { label: "Admin", value: "admin_electrician" },
+      { label: "Customers", value: "customer_electrician" },
+      { label: "Sales", value: "sales_electrician" },
+      { label: "Vendors", value: "vendor_electrician" }
     ]
   },
   field_work: {
@@ -57,6 +68,7 @@ const chatConfigByRole = {
     subtitle: "Send on-site updates to the operations desk",
     scopes: [
       { label: "Vendors", value: "vendor_field_work" },
+      { label: "Sales", value: "sales_field_work" },
       { label: "Admin", value: "admin_field_work" }
     ]
   }
