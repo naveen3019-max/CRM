@@ -85,3 +85,24 @@ export const requestUpload = buildUpload({
   allowedMimeTypes: requestAllowedMimeTypes,
   fileSizeLimitBytes: 25 * 1024 * 1024
 });
+
+export function resolveUploadedFileUrl(file) {
+  if (!file) {
+    return "";
+  }
+
+  const candidate = file.path || file.secure_url || file.url || "";
+  if (/^(https?:)?\/\//i.test(candidate) || candidate.startsWith("data:") || candidate.startsWith("blob:")) {
+    return candidate;
+  }
+
+  if (path.isAbsolute(candidate) && file.filename) {
+    return `/uploads/${file.filename}`;
+  }
+
+  if (file.filename) {
+    return `/uploads/${file.filename}`;
+  }
+
+  return candidate;
+}

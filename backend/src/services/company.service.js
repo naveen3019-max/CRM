@@ -113,10 +113,11 @@ export async function updateBusinessInfo(userId, email, payload) {
   return { success: true };
 }
 
-export async function saveDocument(userId, email, docType, fileUrl, fileName) {
+export async function saveDocument(userId, email, docType, fileData) {
   const company = await ensureCompanyProfile(userId, email);
   if (!company) throw new ApiError(404, "Company profile not found");
-  await companyRepo.saveCompanyDocument(company.id, docType, fileUrl, fileName);
+
+  await companyRepo.saveCompanyDocument(company.id, docType, fileData);
   return { success: true };
 }
 

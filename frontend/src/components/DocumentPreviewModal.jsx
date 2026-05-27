@@ -5,8 +5,8 @@ import { resolveDocumentUrl } from '../utils/documentUrl.js';
 export default function DocumentPreviewModal({ document, onClose, apiBaseUrl }) {
   if (!document) return null;
 
-  const fileUrl = resolveDocumentUrl(document.file_url, apiBaseUrl);
-  const sourceUrl = String(document.file_name || document.file_url || fileUrl || '').toLowerCase();
+  const fileUrl = resolveDocumentUrl(document.url || document.file_url || document.fileUrl, apiBaseUrl);
+  const sourceUrl = String(document.file_name || document.url || document.file_url || fileUrl || '').toLowerCase();
   const isPdf = sourceUrl.endsWith('.pdf');
   const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(sourceUrl);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
@@ -20,8 +20,6 @@ export default function DocumentPreviewModal({ document, onClose, apiBaseUrl }) 
     if (Number.isNaN(date.getTime())) return 'Unknown date';
     return date.toLocaleDateString();
   }, [document.created_at, document.uploadedAt]);
-
-  const canShowPreview = hasFileUrl && ((isImage && !imageLoadFailed) || isPdf);
 
   const zoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 3));
   const zoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));

@@ -1,8 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import fs from "fs/promises";
 import { ApiError } from "../utils/ApiError.js";
 import { env } from "../config/env.js";
-import { isCloudinaryConfigured, uploadFileToCloudinary } from "../utils/cloudinary.js";
+import { isCloudinaryConfigured } from "../config/cloudinary.js";
+import { resolveUploadedFileUrl } from "../utils/upload.js";
 import * as companyService from "../services/company.service.js";
 
 export const register = asyncHandler(async (req, res) => {
@@ -34,26 +34,26 @@ export const uploadDoc = asyncHandler(async (req, res) => {
     throw new ApiError(503, "Document storage is not configured.");
   }
 
-  let fileUrl = `/uploads/${req.file.filename}`;
+  const fileUrl = resolveUploadedFileUrl(req.file);
+  await companyService.saveDocument(req.user.id, req.user.email, docType, {
+    url: fileUrl,
+    publicId: req.file?.filename || null,
+    mimeType: req.file?.mimetype || null,
+    size: req.file?.size || null,
+    fileName: req.file?.originalname || null
+  });
 
-  try {
-    if (isCloudinaryConfigured()) {
-      const uploadResult = await uploadFileToCloudinary(req.file.path, {
-        folder: env.cloudinaryFolder,
-        publicId: `company-${req.user.id}-${docType}-${Date.now()}`,
-        resourceType: "auto"
-      });
-
-      fileUrl = uploadResult.secure_url || uploadResult.url || fileUrl;
+  res.json({
+    success: true,
+    data: {
+      url: fileUrl,
+      fileUrl,
+      publicId: req.file?.filename || null,
+      mimeType: req.file?.mimetype || null,
+      size: req.file?.size || null,
+      fileName: req.file?.originalname || null
     }
-
-    await companyService.saveDocument(req.user.id, req.user.email, docType, fileUrl, req.file.originalname);
-    res.json({ success: true, data: { fileUrl } });
-  } finally {
-    if (req.file?.path) {
-      fs.unlink(req.file.path).catch(() => {});
-    }
-  }
+  });
 });
 
 export const getStatus = asyncHandler(async (req, res) => {
