@@ -359,6 +359,34 @@ export function parseLocationText(body) {
   return normalized || "Shared project location";
 }
 
+function normalizeCoordinate(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function buildLocationMessageBody(location = {}) {
+  const latitude = normalizeCoordinate(location.latitude);
+  const longitude = normalizeCoordinate(location.longitude);
+  const label = String(location.label || location.address || location.formattedAddress || "Shared project location").trim() || "Shared project location";
+  const formattedAddress = String(location.formattedAddress || location.address || "").trim();
+  const mapUrl = String(
+    location.mapUrl ||
+      (Number.isFinite(latitude) && Number.isFinite(longitude)
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${latitude},${longitude}`)}`
+        : "")
+  ).trim();
+
+  return [
+    `location: ${label}`,
+    formattedAddress ? `formattedAddress: ${formattedAddress}` : null,
+    String(location.address || "").trim() && String(location.address || "").trim() !== formattedAddress ? `address: ${String(location.address).trim()}` : null,
+    Number.isFinite(latitude) && Number.isFinite(longitude) ? `coords: ${latitude}, ${longitude}` : null,
+    mapUrl ? `mapUrl: ${mapUrl}` : null
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function parseLocationPayload(body) {
   const source = String(body || "").trim();
   const coordsMatch = source.match(/coords\s*:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/i);

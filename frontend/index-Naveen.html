@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verbena Tech Platform</title>
+    <script>
+      // Earliest possible guard: define a harmless global `start` before any other script runs.
+      // Keep this minimal and placed as the first script to avoid ReferenceError from injected callers.
+      (function () {
+        if (typeof window !== "undefined" && typeof window.start !== "function") {
+          window.start = function () {};
+          if (typeof globalThis !== "undefined") globalThis.start = window.start;
+        }
+
+        if (typeof window !== "undefined") {
+          var currentPath = String(window.location && window.location.pathname ? window.location.pathname : "").replace(/\\/g, "/");
+          if (window.location && window.location.protocol === "file:" && currentPath.endsWith("/frontend/index.html")) {
+            window.location.replace("./dist/index.html");
+          }
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./src/main.jsx"></script>
+  </body>
+</html>

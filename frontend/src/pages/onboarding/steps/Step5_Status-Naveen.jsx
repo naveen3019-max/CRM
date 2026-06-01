@@ -1,0 +1,123 @@
+import React from 'react';
+import { Clock, CheckCircle2, XCircle, RefreshCw, LogOut } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
+export default function Step5_Status({ formData, onReuploadDocuments }) {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const status = formData.status || 'pending';
+  const rejectionReason = formData.rejection_reason || 'Information provided is incomplete or incorrect.';
+
+  const renderStatus = () => {
+    switch(status) {
+      case 'approved':
+        return (
+          <div className="text-center py-8">
+            <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+              <CheckCircle2 size={48} />
+            </div>
+            <h2 className="text-2xl font-bold text-[#111827] mb-2">Account Verified!</h2>
+            <p className="text-[#64748B] mb-8">Your account is verified. You can now access all features.</p>
+            <button 
+              onClick={() => navigate('/vendor', { replace: true })}
+              className="onboarding-btn bg-[#2563EB] text-white px-8 hover:bg-[#1D4ED8] transition-all shadow-lg shadow-[#2563EB]/20"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        );
+      case 'rejected':
+        return (
+          <div className="text-center py-8">
+            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+              <XCircle size={48} />
+            </div>
+            <h2 className="text-2xl font-bold text-[#111827] mb-2">Verification Rejected</h2>
+            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl mb-6">
+              <p className="text-sm text-red-700 font-medium">Reason: {rejectionReason}</p>
+            </div>
+            <p className="text-[#64748B] mb-8">
+              Please review your profile details, re-upload the required documents, and submit again for verification.
+            </p>
+            <div className="mb-6 rounded-2xl border border-dashed border-red-200 bg-red-50/60 p-4 text-left">
+              <h3 className="text-sm font-semibold text-[#111827] mb-2">Re-upload documents</h3>
+              <p className="text-sm text-[#64748B] mb-3">
+                Replace any incorrect files and submit the onboarding form again.
+              </p>
+              <button 
+                onClick={() => onReuploadDocuments ? onReuploadDocuments() : window.location.reload()}
+                className="onboarding-btn btn-outline flex items-center gap-2 mx-auto"
+              >
+                <RefreshCw size={18} /> Open Document Upload
+              </button>
+            </div>
+          </div>
+        );
+      default: // pending
+        return (
+          <div className="text-center py-8">
+            <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm animate-pulse">
+              <Clock size={48} />
+            </div>
+            <h2 className="text-2xl font-bold text-[#111827] mb-2">Verification in Progress</h2>
+            <p className="text-[#64748B] mb-8 leading-relaxed">
+              Your company is under verification.<br />
+              You can continue working while we review your submission.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => window.location.reload()}
+                className="onboarding-btn btn-outline flex items-center gap-2 mx-auto"
+              >
+                <RefreshCw size={18} /> Refresh Status
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    // perform logout and navigate after a short delay to avoid
+                    // race conditions where route changes before state settles
+                    logout();
+                  } catch (err) {
+                    // ensure any unexpected errors don't crash the UI on mobile webviews
+                    console.error("logout error:", err);
+                  }
+
+                  // navigate on the next tick (or fallback to full reload)
+                  try {
+                    setTimeout(() => {
+                      try {
+                        navigate('/', { replace: true });
+                      } catch (err) {
+                        // fallback: force a hard reload to root
+                        try {
+                          window.location.href = '/';
+                        } catch (e) {
+                          /* swallow */
+                        }
+                      }
+                    }, 60);
+                  } catch (err) {
+                    try {
+                      window.location.href = '/';
+                    } catch (e) {
+                      /* swallow */
+                    }
+                  }
+                }}
+                className="text-sm font-semibold text-[#64748B] hover:text-[#111827] flex items-center justify-center gap-1 mt-4"
+              >
+                <LogOut size={14} /> Logout
+              </button>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="animate-in zoom-in duration-500">
+      {renderStatus()}
+    </div>
+  );
+}

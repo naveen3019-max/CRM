@@ -1,0 +1,252 @@
+import { pool } from "../config/db.js";
+
+let companyUserIdColumnChecked = false;
+let companyUserIdColumnExists = false;
+let companyOnboardingColumnsChecked = false;
+let companyDocumentColumnsChecked = false;
+
+async function ensureCompanyOnboardingColumns() {
+  if (companyOnboardingColumnsChecked) {
+    return;
+  }
+
+  const columnsToEnsure = [
+    ["user_id", "BIGINT UNSIGNED NULL AFTER id"],
+    ["service_type", "VARCHAR(255) AFTER name"],
+    ["description", "TEXT AFTER service_type"],
+    ["years_of_experience", "INT AFTER description"],
+    ["city", "VARCHAR(100) AFTER address"],
+    ["state", "VARCHAR(100) AFTER city"],
+    ["pincode", "VARCHAR(10) AFTER state"],
+    ["alternate_phone", "VARCHAR(20) AFTER phone"],
+    ["business_email", "VARCHAR(255) AFTER alternate_phone"],
+    ["website", "VARCHAR(255) AFTER business_email"]
+  ];
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'companies'"
+    );
+    const existingColumns = new Set((rows || []).map((row) => row.COLUMN_NAME));
+
+    for (const [columnName, definition] of columnsToEnsure) {
+      if (existingColumns.has(columnName)) {
+        continue;
+      }
+
+      try {
+        await pool.query(`ALTER TABLE companies ADD COLUMN ${columnName} ${definition}`);
+      } catch (err) {
+        if (err?.code !== "ER_DUP_FIELDNAME") {
+          throw err;
+        }
+      }
+    }
+  } catch (err) {
+    // If schema inspection fails, let the write query report the real error.
+  }
+
+  companyOnboardingColumnsChecked = true;
+}
+
+async function ensureCompanyUserIdColumnState() {
+  if (companyUserIdColumnChecked) {
+    return companyUserIdColumnExists;
+  }
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'companies' AND COLUMN_NAME = 'user_id'"
+    );
+    companyUserIdColumnExists = Number(rows?.[0]?.cnt || 0) > 0;
+  } catch (err) {
+    companyUserIdColumnExists = false;
+  }
+
+  companyUserIdColumnChecked = true;
+  return companyUserIdColumnExists;
+}
+
+async function ensureCompanyDocumentColumns() {
+  if (companyDocumentColumnsChecked) {
+    return;
+  }
+
+  const columnsToEnsure = [
+    ["public_id", "VARCHAR(255) NULL AFTER file_url"],
+    ["mime_type", "VARCHAR(100) NULL AFTER public_id"],
+    ["file_size", "INT NULL AFTER mime_type"],
+    ["updated_at", "TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP AFTER created_at"]
+  ];
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'company_documents'"
+    );
+    const existingColumns = new Set((rows || []).map((row) => row.COLUMN_NAME));
+
+    for (const [columnName, definition] of columnsToEnsure) {
+      if (existingColumns.has(columnName)) {
+        continue;
+      }
+
+      try {
+        await pool.query(`ALTER TABLE company_documents ADD COLUMN ${columnName} ${definition}`);
+      } catch (err) {
+        if (err?.code !== "ER_DUP_FIELDNAME") {
+          throw err;
+        }
+      }
+    }
+  } catch {
+    // Ignore schema inspection issues and let writes fail normally if the table is unavailable.
+  }
+
+  companyDocumentColumnsChecked = true;
+}
+
+export async function createCompany(data) {
+  const [result] = await pool.query(
+    "INSERT INTO companies (name, email, password_hash) VALUES (?, ?, ?)",
+    [data.name, data.email, data.passwordHash]
+  );
+  return result.insertId;
+}
+
+export async function findCompanyByEmail(email) {
+  const [rows] = await pool.query("SELECT * FROM companies WHERE email = ?", [email]);
+  return rows[0];
+}
+
+export async function findCompanyById(id) {
+  const [rows] = await pool.query("SELECT * FROM companies WHERE id = ?", [id]);
+  return rows[0];
+}
+
+export async function findCompanyByUserId(userId) {
+  const hasUserIdColumn = await ensureCompanyUserIdColumnState();
+  if (!hasUserIdColumn) {
+    return null;
+  }
+
+  const [rows] = await pool.query("SELECT * FROM companies WHERE user_id = ?", [userId]);
+  return rows[0];
+}
+
+export async function linkCompanyToUserId(companyId, userId) {
+  const hasUserIdColumn = await ensureCompanyUserIdColumnState();
+  if (!hasUserIdColumn) {
+    return;
+  }
+
+  await pool.query(
+    `UPDATE companies
+     SET user_id = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [userId, companyId]
+  );
+}
+
+export async function updateCompanyInfo(id, data) {
+  await ensureCompanyOnboardingColumns();
+
+  await pool.query(
+    `UPDATE companies SET 
+      service_type = ?, 
+      description = ?, 
+      years_of_experience = ?, 
+      address = ?, 
+      city = ?, 
+      state = ?, 
+      pincode = ?, 
+      phone = ?, 
+      alternate_phone = ?, 
+      business_email = ?, 
+      website = ?,
+      status = 'pending'
+    WHERE id = ?`,
+    [
+      data.service_type, 
+      data.description, 
+      data.years_of_experience, 
+      data.address, 
+      data.city, 
+      data.state, 
+      data.pincode, 
+      data.phone, 
+      data.alternate_phone, 
+      data.business_email, 
+      data.website,
+      id
+    ]
+  );
+}
+
+export async function createCompanyProfile(data) {
+  const hasUserIdColumn = await ensureCompanyUserIdColumnState();
+  const query = hasUserIdColumn
+    ? "INSERT INTO companies (user_id, name, email) VALUES (?, ?, ?)"
+    : "INSERT INTO companies (name, email) VALUES (?, ?)";
+  const values = hasUserIdColumn ? [data.userId, data.name, data.email] : [data.name, data.email];
+
+  const [result] = await pool.query(query, values);
+  return result.insertId;
+}
+
+export async function saveCompanyDocument(companyId, docType, fileData) {
+  await ensureCompanyDocumentColumns();
+
+  const fileUrl = fileData?.url || fileData?.fileUrl || "";
+  const publicId = fileData?.publicId || null;
+  const mimeType = fileData?.mimeType || null;
+  const fileSize = fileData?.size || null;
+  const fileName = fileData?.fileName || null;
+
+  await pool.query(
+    `INSERT INTO company_documents (company_id, doc_type, file_url, public_id, mime_type, file_size, file_name)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       file_url = VALUES(file_url),
+       public_id = VALUES(public_id),
+       mime_type = VALUES(mime_type),
+       file_size = VALUES(file_size),
+       file_name = VALUES(file_name)`,
+    [companyId, docType, fileUrl, publicId, mimeType, fileSize, fileName]
+  );
+}
+
+export async function getCompanyDocuments(companyId) {
+  await ensureCompanyDocumentColumns();
+
+  const [rows] = await pool.query(
+    `SELECT
+      id,
+      company_id AS company_id,
+      doc_type,
+      file_url,
+      file_url AS url,
+      public_id,
+      mime_type,
+      file_size,
+      file_name,
+      created_at,
+      updated_at
+     FROM company_documents
+     WHERE company_id = ?
+     ORDER BY created_at DESC`,
+    [companyId]
+  );
+  return rows;
+}
+
+export async function getAllCompanies() {
+  const [rows] = await pool.query("SELECT id, user_id, name, email, industry, status, created_at FROM companies ORDER BY created_at DESC");
+  return rows;
+}
+
+export async function updateCompanyStatus(id, status, reason = null) {
+  await pool.query(
+    "UPDATE companies SET status = ?, rejection_reason = ? WHERE id = ?",
+    [status, reason, id]
+  );
+}

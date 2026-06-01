@@ -200,3 +200,9 @@ tasks.register("copyFrontendWebAssets", Copy) {
 tasks.named("preBuild") {
     dependsOn tasks.named("copyFrontendWebAssets")
 }
+
+// In this OneDrive workspace, stale debug CMake clean tasks can reference removed
+// transient codegen paths and fail unrelated release builds.
+tasks.matching { it.name == "externalNativeBuildCleanDebug" || it.name == "externalNativeBuildCleanRelease" }.configureEach {
+    enabled = false
+}
