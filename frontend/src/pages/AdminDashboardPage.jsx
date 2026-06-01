@@ -66,7 +66,7 @@ export default function AdminDashboardPage() {
   return (
     <section className="space-y-4 pb-8 sm:space-y-6 sm:pb-12">
       {/* KPI Overview */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {loading ? (
           [1, 2, 3, 4].map(i => <div key={i} className="h-32 glass-panel animate-pulse bg-white/50"></div>)
         ) : (
@@ -168,8 +168,9 @@ export default function AdminDashboardPage() {
                   ))}
             </div>
 
-            <div className="hidden max-h-[400px] overflow-auto md:block">
-              <table className="w-full min-w-[540px] text-left text-sm">
+            <div className="hidden md:block max-h-[400px] overflow-auto">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full min-w-full text-left text-sm table-auto">
                 <thead className="sticky top-0 bg-white/95 backdrop-blur z-10">
                   <tr className="border-b border-slate-100 text-slate-500">
                     <th className="py-3 px-2 w-10">
@@ -248,7 +249,8 @@ export default function AdminDashboardPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           </section>
 
