@@ -2,7 +2,16 @@ const CHAT_ROLE_ALIASES = new Map([
   ["field_work", "field_work"],
   ["service_professional", "field_work"],
   ["worker", "field_work"],
-  ["other_worker", "field_work"]
+  ["other_worker", "field_work"],
+  // Support mapping of specific service category roles (e.g. plumber, carpenter)
+  ["plumber", "field_work"],
+  ["internet_installation", "field_work"],
+  ["cctv_technician", "field_work"],
+  ["ac_service", "field_work"],
+  ["carpenter", "field_work"],
+  ["painter", "field_work"],
+  ["appliance_repair", "field_work"],
+  ["general_technician", "field_work"]
 ]);
 
 export function normalizeRole(role) {

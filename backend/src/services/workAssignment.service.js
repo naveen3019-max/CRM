@@ -418,6 +418,26 @@ async function sendAssignmentNotificationToChat(assignment, senderUserId) {
       messageBody: messageContent
     });
 
+    // Emit the chat message in realtime so it appears immediately for both users
+    try {
+      const payload = {
+        id: messageId,
+        conversationId: chat.id,
+        senderId: senderUserId,
+        receiverId: assignment.workerId,
+        messageBody: messageContent,
+        originalMessage: messageContent,
+        originalLanguage: null,
+        translatedMessages: {},
+        createdAt: new Date().toISOString()
+      };
+
+      emitToUser(senderUserId, "chat:message", payload);
+      emitToUser(assignment.workerId, "chat:message", payload);
+    } catch (emitErr) {
+      console.error("Failed to emit assignment chat message:", emitErr);
+    }
+
     return messageId;
   } catch (error) {
     console.error("Failed to send assignment notification to chat:", error);
