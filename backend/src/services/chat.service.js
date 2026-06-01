@@ -108,6 +108,14 @@ export async function openConversation(actor, payload) {
     throw new ApiError(404, "Conversation participant not found");
   }
 
+  console.debug("[chat.openConversation] request", {
+    actorId: actor.id,
+    actorRole: actor.role,
+    otherUserId: otherUser.id,
+    otherUserRole: otherUser.role,
+    scope: payload.scope
+  });
+
   validateConversationScope(payload.scope, actor.role, otherUser.role);
 
   let conversation = await findConversation(payload.scope, actor.id, payload.otherUserId);
@@ -131,6 +139,13 @@ export async function getOrCreateConversation(actor, targetUserId) {
   }
 
   const scope = getConversationScopeForRoles(actor.role, otherUser.role);
+  console.debug("[chat.getOrCreateConversation] resolved scope", {
+    actorId: actor.id,
+    actorRole: actor.role,
+    targetUserId: otherUser.id,
+    targetUserRole: otherUser.role,
+    scope
+  });
   let conversation = await findConversation(scope, actor.id, otherUser.id);
 
   if (!conversation) {

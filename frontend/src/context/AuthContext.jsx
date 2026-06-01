@@ -4,6 +4,19 @@ import i18n, { normalizeLanguageCode } from "../i18n/index.js";
 const AuthContext = createContext(null);
 const STORAGE_KEY = "verbena_auth";
 
+function normalizeRole(role) {
+  if (role === null || role === undefined) {
+    return "";
+  }
+
+  const lowered = String(role).trim().toLowerCase();
+  if (lowered === "service_professional" || lowered === "worker" || lowered === "other_worker") {
+    return "field_work";
+  }
+
+  return lowered;
+}
+
 function clearStoredAuth() {
   try {
     window.localStorage.removeItem(STORAGE_KEY);
@@ -48,6 +61,10 @@ function readStoredAuth() {
       return null;
     }
 
+    if (parsed?.user?.role) {
+      parsed.user.role = normalizeRole(parsed.user.role);
+    }
+
     return parsed;
   } catch {
     clearStoredAuth();
@@ -90,6 +107,7 @@ export function AuthProvider({ children }) {
     // Normalize service category / workType for backward compatibility
     const normalizedUser = {
       ...nextUser,
+      role: normalizeRole(nextUser.role),
       workType: nextUser.workType || nextUser.serviceCategory || null,
       serviceCategory: nextUser.serviceCategory || nextUser.workType || null,
       preferredLanguage: "en"
@@ -127,6 +145,7 @@ export function AuthProvider({ children }) {
   const updateUser = (nextUser) => {
     const normalizedUser = {
       ...nextUser,
+      role: normalizeRole(nextUser.role),
       workType: nextUser.workType || nextUser.serviceCategory || null,
       serviceCategory: nextUser.serviceCategory || nextUser.workType || null,
       preferredLanguage: "en"

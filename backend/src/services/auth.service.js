@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { ApiError } from "../utils/ApiError.js";
 import { ROLES } from "../utils/constants.js";
 import { signAccessToken } from "../utils/jwt.js";
+import { normalizeRole } from "../utils/roleUtils.js";
 import * as companyRepo from "../repositories/company.repository.js";
 import {
   createUser,
@@ -26,8 +27,9 @@ export async function signupUser(payload) {
     throw new ApiError(409, "Mobile number already registered");
   }
 
-  let role = Object.values(ROLES).includes(payload.role) ? payload.role : ROLES.CUSTOMER;
-  if (!Object.values(ROLES).includes(payload.role) && payload.workType) {
+  const requestedRole = normalizeRole(payload.role);
+  let role = Object.values(ROLES).includes(requestedRole) ? requestedRole : ROLES.CUSTOMER;
+  if (!Object.values(ROLES).includes(requestedRole) && payload.workType) {
     role = ROLES.SERVICE_PROFESSIONAL;
   }
   const passwordHash = await bcrypt.hash(payload.password, 10);
@@ -63,7 +65,7 @@ export async function signupUser(payload) {
         id: userId,
         name: payload.name,
         email: payload.email,
-        role,
+        role: normalizeRole(role),
         phone: null,
         mobile: payload.mobile,
         serviceCategory: payload.workType || null,
@@ -87,7 +89,7 @@ export async function signupUser(payload) {
       id: userId,
       name: payload.name,
       email: payload.email,
-      role,
+      role: normalizeRole(role),
       phone: null,
       mobile: payload.mobile,
       serviceCategory: payload.workType || null,
@@ -130,7 +132,7 @@ export async function loginUser(payload) {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role,
+      role: normalizeRole(user.role),
       phone: user.phone || null,
       mobile: user.mobile || null,
       serviceCategory: user.service_category || user.work_type || null,
@@ -157,7 +159,7 @@ export async function getUserProfile(actorId) {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role: normalizeRole(user.role),
     phone: user.phone || null,
     mobile: user.mobile || null,
     state: user.state || null,
@@ -221,7 +223,7 @@ export async function updateUserProfile(actorId, payload) {
     id: updated.id,
     name: updated.name,
     email: updated.email,
-    role: updated.role,
+    role: normalizeRole(updated.role),
     phone: updated.phone || null,
     mobile: updated.mobile || null,
     state: updated.state || null,
@@ -261,7 +263,7 @@ export async function verifyEmail(verificationToken) {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role,
+      role: normalizeRole(user.role),
       phone: null,
       workType: user.work_type || null
     }

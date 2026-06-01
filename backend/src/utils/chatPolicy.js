@@ -1,5 +1,6 @@
 import { MESSAGE_SCOPE, ROLES } from "./constants.js";
 import { ApiError } from "./ApiError.js";
+import { expandChatRoles, normalizeRole, rolesMatch } from "./roleUtils.js";
 
 const allowedScopes = {
   [MESSAGE_SCOPE.SALES_CUSTOMER]: [ROLES.SALES, ROLES.CUSTOMER],
@@ -26,10 +27,17 @@ export function validateConversationScope(scope, roleA, roleB) {
     throw new ApiError(400, "Unsupported chat scope");
   }
 
-  const provided = [roleA, roleB].sort().join(":");
-  const expected = [...allowed].sort().join(":");
+  const provided = [normalizeRole(roleA), normalizeRole(roleB)].sort().join(":");
+  const expected = [...expandChatRoles(allowed)].sort().join(":");
 
   if (provided !== expected) {
+    console.debug("[chatPolicy] scope denied", {
+      scope,
+      roleA: normalizeRole(roleA),
+      roleB: normalizeRole(roleB),
+      expected,
+      provided
+    });
     throw new ApiError(403, "Chat scope is not allowed for these roles");
   }
 }
@@ -40,16 +48,18 @@ export function getCounterpartRoles(scope, actorRole) {
     throw new ApiError(400, "Unsupported chat scope");
   }
 
-  if (!allowed.includes(actorRole)) {
+  const normalizedActorRole = normalizeRole(actorRole);
+  if (!expandChatRoles(allowed).some((role) => rolesMatch(role, normalizedActorRole))) {
     throw new ApiError(403, "Chat scope is not allowed for this role");
   }
 
-  return allowed.filter((role) => role !== actorRole);
+  return expandChatRoles(allowed).filter((role) => !rolesMatch(role, normalizedActorRole));
 }
 
 export function getAllowedScopesForRole(actorRole) {
+  const normalizedActorRole = normalizeRole(actorRole);
   return Object.entries(allowedScopes)
-    .filter(([, roles]) => roles.includes(actorRole))
+    .filter(([, roles]) => expandChatRoles(roles).some((role) => rolesMatch(role, normalizedActorRole)))
     .map(([scope]) => scope);
 }
 
@@ -73,10 +83,10 @@ export function getAvailableChatRolesForRole(actorRole) {
 }
 
 export function getConversationScopeForRoles(roleA, roleB) {
-  const provided = [roleA, roleB].sort().join(":");
+  const provided = [normalizeRole(roleA), normalizeRole(roleB)].sort().join(":");
 
   for (const [scope, roles] of Object.entries(allowedScopes)) {
-    const expected = [...roles].sort().join(":");
+    const expected = [...expandChatRoles(roles)].sort().join(":");
     if (provided === expected) {
       return scope;
     }

@@ -5,6 +5,35 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL
 });
 
+let authExpiredDispatched = false;
+
+function clearStoredAuth() {
+  try {
+    window.localStorage.removeItem("verbena_auth");
+  } catch {
+    // Silently fail
+  }
+}
+
+function dispatchAuthExpired() {
+  if (authExpiredDispatched) {
+    return;
+  }
+
+  authExpiredDispatched = true;
+  clearStoredAuth();
+
+  try {
+    window.dispatchEvent(new CustomEvent("verbena:auth-expired"));
+  } catch {
+    // Silently fail
+  }
+
+  window.setTimeout(() => {
+    authExpiredDispatched = false;
+  }, 0);
+}
+
 apiClient.interceptors.request.use((config) => {
   if (typeof config.url === "string") {
     config.url = config.url.trim();
@@ -45,6 +74,20 @@ apiClient.interceptors.request.use((config) => {
 
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const message = String(error?.response?.data?.message || error?.message || "").toLowerCase();
+
+    if (status === 401 || message.includes("token") || message.includes("expired")) {
+      dispatchAuthExpired();
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export function withAuth(token) {
   const trimmedToken = typeof token === "string" ? token.trim() : "";
