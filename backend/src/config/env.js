@@ -66,7 +66,9 @@ const resolvedUploadDir = path.isAbsolute(uploadDirSetting)
   ? uploadDirSetting
   : path.resolve(backendRoot, uploadDirSetting);
 
-const parsedDatabaseUrl = parseDatabaseUrl(process.env.DATABASE_URL || process.env.MYSQL_URL);
+const parsedDatabaseUrl = parseDatabaseUrl(
+  process.env.DATABASE_URL || process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL
+);
 const hasLocalDbOverride = Boolean(
   process.env.LOCAL_DB_HOST ||
   process.env.LOCAL_DB_PORT ||
@@ -104,7 +106,11 @@ export const env = {
     : process.env.DB_USER || process.env.MYSQLUSER || parsedDatabaseUrl?.user || "root",
   dbPassword: shouldUseLocalDbFallback
     ? fallbackDbPassword
-    : process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || parsedDatabaseUrl?.password || "",
+    : process.env.DB_PASSWORD ||
+      process.env.MYSQLPASSWORD ||
+      parsedDatabaseUrl?.password ||
+      process.env.MYSQL_ROOT_PASSWORD ||
+      "",
   dbSsl: shouldUseLocalDbFallback ? false : parseBoolean(process.env.DB_SSL, false),
   dbSslRejectUnauthorized: parseBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, true),
   dbConnectTimeoutMs: parsePositiveInteger(process.env.DB_CONNECT_TIMEOUT_MS, 10000),

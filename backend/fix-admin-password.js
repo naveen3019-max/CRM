@@ -1,30 +1,45 @@
 import mysql from 'mysql2/promise';
+import bcrypt from 'bcryptjs';
+import { env } from './src/config/env.js';
+
+const adminName = process.env.ADMIN_NAME || 'Platform Admin';
+const adminEmail = process.env.ADMIN_EMAIL || 'admin@verbenatech.com';
+const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeMe@123';
+const adminRole = process.env.ADMIN_ROLE || 'admin';
 
 const conn = await mysql.createConnection({
-  host: 'yamabiko.proxy.rlwy.net',
-  port: 45729,
-  user: 'root',
-  password: 'ZVCKgPmMjvVJuVbnqNFwtrtlKyBmqEeI',
-  database: 'railway',
-  ssl: { rejectUnauthorized: false }
+  host: env.dbHost,
+  port: env.dbPort,
+  user: env.dbUser,
+  password: env.dbPassword,
+  database: env.dbName,
+  ssl: env.dbSsl
+    ? {
+        rejectUnauthorized: env.dbSslRejectUnauthorized
+      }
+    : undefined
 });
 
 try {
-  // The correct bcrypt hash for "ChangeMe@123"
-  const correctHash = '$2a$10$sydJvqopghIPQzkMu.b6AOFyVSQMPGx76h2XQxVA8XjvvdP9aHx5.';
-  
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
+
   await conn.query(
-    'UPDATE users SET password_hash = ? WHERE email = ?',
-    [correctHash, 'admin@verbenatech.com']
+    `INSERT INTO users (name, email, password_hash, role)
+     VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       name = VALUES(name),
+       password_hash = VALUES(password_hash),
+       role = VALUES(role)`,
+    [adminName, adminEmail, passwordHash, adminRole]
   );
   
-  console.log('✅ Admin password hash updated successfully!');
-  console.log('Email: admin@verbenatech.com');
-  console.log('Password: ChangeMe@123');
+  console.log('✅ Admin user upserted successfully.');
+  console.log(`Email: ${adminEmail}`);
+  console.log(`Role: ${adminRole}`);
   
   const [rows] = await conn.query(
     'SELECT id, name, email, role, password_hash, is_active FROM users WHERE email = ?',
-    ['admin@verbenatech.com']
+    [adminEmail]
   );
   
   console.log('\nAdmin User Record:');
