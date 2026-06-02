@@ -66,8 +66,11 @@ const resolvedUploadDir = path.isAbsolute(uploadDirSetting)
   ? uploadDirSetting
   : path.resolve(backendRoot, uploadDirSetting);
 
-const parsedDatabaseUrl = parseDatabaseUrl(
-  process.env.DATABASE_URL || process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL
+const databaseUrlSource = process.env.DATABASE_URL || process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL;
+const parsedDatabaseUrl = parseDatabaseUrl(databaseUrlSource);
+const inferredDbSsl = Boolean(
+  parsedDatabaseUrl?.host?.endsWith(".proxy.rlwy.net") ||
+  process.env.MYSQL_PUBLIC_URL === databaseUrlSource
 );
 const hasLocalDbOverride = Boolean(
   process.env.LOCAL_DB_HOST ||
@@ -94,25 +97,25 @@ export const env = {
   googleTranslateApiKey: process.env.GOOGLE_TRANSLATE_API_KEY || process.env.GOOGLE_API_KEY || "",
   dbHost: shouldUseLocalDbFallback
     ? fallbackDbHost
-    : process.env.DB_HOST || process.env.MYSQLHOST || parsedDatabaseUrl?.host || "localhost",
+    : parsedDatabaseUrl?.host || process.env.DB_HOST || process.env.MYSQLHOST || "localhost",
   dbPort: shouldUseLocalDbFallback
     ? fallbackDbPort
-    : Number(process.env.DB_PORT || process.env.MYSQLPORT || parsedDatabaseUrl?.port || 3306),
+    : Number(parsedDatabaseUrl?.port || process.env.DB_PORT || process.env.MYSQLPORT || 3306),
   dbName: shouldUseLocalDbFallback
     ? fallbackDbName
-    : process.env.DB_NAME || process.env.MYSQLDATABASE || parsedDatabaseUrl?.database || "verbena_crm",
+    : parsedDatabaseUrl?.database || process.env.DB_NAME || process.env.MYSQLDATABASE || "verbena_crm",
   dbUser: shouldUseLocalDbFallback
     ? fallbackDbUser
-    : process.env.DB_USER || process.env.MYSQLUSER || parsedDatabaseUrl?.user || "root",
+    : parsedDatabaseUrl?.user || process.env.DB_USER || process.env.MYSQLUSER || "root",
   dbPassword: shouldUseLocalDbFallback
     ? fallbackDbPassword
-    : process.env.DB_PASSWORD ||
+    : parsedDatabaseUrl?.password ||
+      process.env.DB_PASSWORD ||
       process.env.MYSQLPASSWORD ||
-      parsedDatabaseUrl?.password ||
       process.env.MYSQL_ROOT_PASSWORD ||
       "",
-  dbSsl: shouldUseLocalDbFallback ? false : parseBoolean(process.env.DB_SSL, false),
-  dbSslRejectUnauthorized: parseBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, true),
+  dbSsl: shouldUseLocalDbFallback ? false : parseBoolean(process.env.DB_SSL, inferredDbSsl),
+  dbSslRejectUnauthorized: parseBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, inferredDbSsl ? false : true),
   dbConnectTimeoutMs: parsePositiveInteger(process.env.DB_CONNECT_TIMEOUT_MS, 10000),
   dbConnectRetries: parsePositiveInteger(process.env.DB_CONNECT_RETRIES, 5),
   dbConnectRetryDelayMs: parsePositiveInteger(process.env.DB_CONNECT_RETRY_DELAY_MS, 1500),
