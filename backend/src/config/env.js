@@ -66,11 +66,11 @@ const resolvedUploadDir = path.isAbsolute(uploadDirSetting)
   ? uploadDirSetting
   : path.resolve(backendRoot, uploadDirSetting);
 
-const databaseUrlSource = process.env.DATABASE_URL || process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL;
+const databaseUrlSource = process.env.MYSQL_PUBLIC_URL || process.env.DATABASE_URL || process.env.MYSQL_URL;
 const parsedDatabaseUrl = parseDatabaseUrl(databaseUrlSource);
 const inferredDbSsl = Boolean(
   parsedDatabaseUrl?.host?.endsWith(".proxy.rlwy.net") ||
-  process.env.MYSQL_PUBLIC_URL === databaseUrlSource
+  (process.env.MYSQL_PUBLIC_URL && process.env.MYSQL_PUBLIC_URL === databaseUrlSource)
 );
 const hasLocalDbOverride = Boolean(
   process.env.LOCAL_DB_HOST ||
@@ -97,16 +97,16 @@ export const env = {
   googleTranslateApiKey: process.env.GOOGLE_TRANSLATE_API_KEY || process.env.GOOGLE_API_KEY || "",
   dbHost: shouldUseLocalDbFallback
     ? fallbackDbHost
-    : parsedDatabaseUrl?.host || process.env.DB_HOST || process.env.MYSQLHOST || "localhost",
+    : parsedDatabaseUrl?.host || process.env.DB_HOST || process.env.MYSQLHOST || "",
   dbPort: shouldUseLocalDbFallback
     ? fallbackDbPort
     : Number(parsedDatabaseUrl?.port || process.env.DB_PORT || process.env.MYSQLPORT || 3306),
   dbName: shouldUseLocalDbFallback
     ? fallbackDbName
-    : parsedDatabaseUrl?.database || process.env.DB_NAME || process.env.MYSQLDATABASE || "verbena_crm",
+    : parsedDatabaseUrl?.database || process.env.DB_NAME || process.env.MYSQLDATABASE || "",
   dbUser: shouldUseLocalDbFallback
     ? fallbackDbUser
-    : parsedDatabaseUrl?.user || process.env.DB_USER || process.env.MYSQLUSER || "root",
+    : parsedDatabaseUrl?.user || process.env.DB_USER || process.env.MYSQLUSER || "",
   dbPassword: shouldUseLocalDbFallback
     ? fallbackDbPassword
     : parsedDatabaseUrl?.password ||
@@ -126,3 +126,17 @@ export const env = {
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || "",
   cloudinaryFolder: process.env.CLOUDINARY_FOLDER || "verbena/company-documents"
 };
+
+export function validateEnv() {
+  const isProd = env.nodeEnv === "production";
+  if (isProd && (env.jwtSecret === "dev_secret" || !process.env.JWT_SECRET)) {
+    throw new Error("PRODUCTION ERROR: JWT_SECRET is missing or using insecure default.");
+  }
+  
+  if (!env.dbHost || !env.dbName || !env.dbUser) {
+    console.error("[Config] Database configuration is incomplete:", {
+      host: !!env.dbHost, name: !!env.dbName, user: !!env.dbUser
+    });
+    throw new Error("Database configuration environment variables are missing.");
+  }
+}

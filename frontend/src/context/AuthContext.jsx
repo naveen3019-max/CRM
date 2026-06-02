@@ -10,7 +10,19 @@ function normalizeRole(role) {
   }
 
   const lowered = String(role).trim().toLowerCase();
-  if (lowered === "service_professional" || lowered === "worker" || lowered === "other_worker") {
+  if (
+    lowered === "service_professional" ||
+    lowered === "worker" ||
+    lowered === "other_worker" ||
+    lowered === "plumber" ||
+    lowered === "internet_installation" ||
+    lowered === "cctv_technician" ||
+    lowered === "ac_service" ||
+    lowered === "carpenter" ||
+    lowered === "painter" ||
+    lowered === "appliance_repair" ||
+    lowered === "general_technician"
+  ) {
     return "field_work";
   }
 

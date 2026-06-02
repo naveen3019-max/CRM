@@ -62,6 +62,16 @@ app.get("/health", (req, res) => {
   });
 });
 
+app.get("/api/health/database", async (req, res) => {
+  try {
+    const { pool } = await import("./config/db.js");
+    await pool.query("SELECT 1");
+    res.json({ success: true, database: "connected" });
+  } catch (error) {
+    res.status(503).json({ success: false, database: "disconnected", error: error.message });
+  }
+});
+
 app.get("/", (req, res) => {
   res.json({
     success: true,

@@ -2,7 +2,7 @@ import fs from "fs";
 import http from "http";
 import path from "path";
 import app from "./app.js";
-import { env } from "./config/env.js";
+import { env, validateEnv } from "./config/env.js";
 import { getDatabaseDebugSummary, verifyDatabaseConnection } from "./config/db.js";
 import { ensureGroupChatSchema } from "./database/groupChatSchema.js";
 import { ensureTranslationColumnsExist } from "./repositories/chat.repository.js";
@@ -11,6 +11,8 @@ import { ensureWorkAssignmentsTableExists } from "./repositories/workAssignment.
 import { initSocketServer } from "./sockets/index.js";
 
 async function bootstrap() {
+  validateEnv();
+
   const uploadPath = path.resolve(env.uploadDir);
   if (!fs.existsSync(uploadPath)) {
     fs.mkdirSync(uploadPath, { recursive: true });
@@ -34,8 +36,8 @@ async function bootstrap() {
   initSocketServer(server);
 
   return new Promise((resolve) => {
-    server.listen(env.port, () => {
-      console.log(`Server listening on port ${env.port}`);
+    server.listen(env.port, "0.0.0.0", () => {
+      console.log(`Server listening on port ${env.port} and binding to 0.0.0.0`);
       resolve(server);
     });
   });

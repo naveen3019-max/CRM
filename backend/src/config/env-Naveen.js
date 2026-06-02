@@ -66,7 +66,9 @@ const resolvedUploadDir = path.isAbsolute(uploadDirSetting)
   ? uploadDirSetting
   : path.resolve(backendRoot, uploadDirSetting);
 
-const parsedDatabaseUrl = parseDatabaseUrl(process.env.DATABASE_URL || process.env.MYSQL_URL);
+const parsedDatabaseUrl = parseDatabaseUrl(
+  process.env.DATABASE_URL || process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL
+);
 const hasLocalDbOverride = Boolean(
   process.env.LOCAL_DB_HOST ||
   process.env.LOCAL_DB_PORT ||

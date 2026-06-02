@@ -49,6 +49,7 @@ export async function verifyDatabaseConnection() {
     try {
       connection = await pool.getConnection();
       await connection.query("SELECT 1");
+      console.log(`[Database] Connection verified on ${env.dbHost}:${env.dbPort}`);
       return;
     } catch (error) {
       const shouldRetry = isTransientConnectionError(error) && attempt < env.dbConnectRetries;

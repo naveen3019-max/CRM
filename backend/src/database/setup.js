@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import mysql from "mysql2/promise";
+import bcrypt from "bcryptjs";
 import { env } from "../config/env.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -57,7 +58,7 @@ async function setupDatabase() {
   });
 
   try {
-    await adminPool.query(`CREATE DATABASE IF NOT EXISTS \`${env.dbName}\``);
+    await adminPool.query(`CREATE DATABASE IF NOT EXISTS \`${env.dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   } catch (error) {
     if (!["ER_DBACCESS_DENIED_ERROR", "ER_ACCESS_DENIED_ERROR"].includes(error.code)) {
       throw error;
@@ -103,6 +104,7 @@ async function setupDatabase() {
     const addServiceCategoryMigrationFile = path.resolve(__dirname, "migrations/015_add_service_category.sql");
     const syncEnumsMigrationFile = path.resolve(__dirname, "migrations/016_sync_enums_and_columns.sql");
     const addLastSeenMigrationFile = path.resolve(__dirname, "migrations/017_add_last_seen.sql");
+    const requiredTablesMigrationFile = path.resolve(__dirname, "migrations/019_required_tables.sql");
     const seedFile = path.resolve(__dirname, "seeds/001_seed_users.sql");
 
     await runSqlFileSafe(appPool, migrationFile);
@@ -177,7 +179,22 @@ async function setupDatabase() {
     // Run additional sync migrations if present
     await runSqlFileSafe(appPool, syncEnumsMigrationFile);
     await runSqlFileSafe(appPool, addLastSeenMigrationFile);
+    await runSqlFileSafe(appPool, requiredTablesMigrationFile);
     await runSqlFileSafe(appPool, seedFile);
+
+    // Admin Seed Logic
+    const adminEmail = "admin@verbenatech.com";
+    const adminPass = "ChangeMe@123";
+    const [existing] = await appPool.query("SELECT id FROM users WHERE email = ? LIMIT 1", [adminEmail]);
+    
+    if (existing.length === 0) {
+      const hash = await bcrypt.hash(adminPass, 10);
+      await appPool.query(
+        "INSERT INTO users (name, email, password_hash, role, mobile) VALUES (?, ?, ?, ?, ?)",
+        ["Platform Admin", adminEmail, hash, "admin", "0000000000"]
+      );
+      console.log("[DB Setup] Default admin account seeded.");
+    }
 
     console.log(`Database setup completed for ${env.dbName}`);
   } finally {

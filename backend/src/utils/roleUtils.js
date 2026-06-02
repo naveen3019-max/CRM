@@ -40,6 +40,16 @@ export function expandChatRoles(roles = []) {
 
     if (normalized === "field_work") {
       expanded.add("service_professional");
+      expanded.add("worker");
+      expanded.add("other_worker");
+      expanded.add("plumber");
+      expanded.add("internet_installation");
+      expanded.add("cctv_technician");
+      expanded.add("ac_service");
+      expanded.add("carpenter");
+      expanded.add("painter");
+      expanded.add("appliance_repair");
+      expanded.add("general_technician");
     }
   }
 

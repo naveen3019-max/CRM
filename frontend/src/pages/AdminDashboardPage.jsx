@@ -66,7 +66,7 @@ export default function AdminDashboardPage() {
   return (
     <section className="space-y-4 pb-8 sm:space-y-6 sm:pb-12">
       {/* KPI Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         {loading ? (
           [1, 2, 3, 4].map(i => <div key={i} className="h-32 glass-panel animate-pulse bg-white/50"></div>)
         ) : (
