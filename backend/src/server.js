@@ -5,6 +5,9 @@ import app from "./app.js";
 import { env } from "./config/env.js";
 import { getDatabaseDebugSummary, verifyDatabaseConnection } from "./config/db.js";
 import { ensureGroupChatSchema } from "./database/groupChatSchema.js";
+import { ensureTranslationColumnsExist } from "./repositories/chat.repository.js";
+import { ensureCancelReasonColumnExists } from "./repositories/serviceRequest.repository.js";
+import { ensureWorkAssignmentsTableExists } from "./repositories/workAssignment.repository.js";
 import { initSocketServer } from "./sockets/index.js";
 
 async function bootstrap() {
@@ -16,6 +19,9 @@ async function bootstrap() {
   try {
     await verifyDatabaseConnection();
     await ensureGroupChatSchema();
+    await ensureTranslationColumnsExist();
+    await ensureCancelReasonColumnExists();
+    await ensureWorkAssignmentsTableExists();
   } catch (error) {
     if (!env.allowStartWithoutDb) {
       throw error;

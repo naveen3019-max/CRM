@@ -2,7 +2,7 @@ import { pool } from "../config/db.js";
 
 let workAssignmentsTableReady = false;
 
-async function ensureWorkAssignmentsTableExists() {
+export async function ensureWorkAssignmentsTableExists() {
   if (workAssignmentsTableReady) {
     return;
   }
@@ -57,10 +57,6 @@ async function ensureWorkAssignmentsTableExists() {
     console.warn("[DB] Warning: work_assignments table may not exist:", error && error.message);
   }
 }
-
-ensureWorkAssignmentsTableExists().catch((error) => {
-  console.warn("[DB] work_assignments init error:", error && error.message);
-});
 
 export async function createWorkAssignmentRecord(payload) {
   await ensureWorkAssignmentsTableExists();

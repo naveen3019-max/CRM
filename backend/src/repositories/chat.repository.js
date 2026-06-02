@@ -4,7 +4,7 @@ import { expandChatRoles } from "../utils/roleUtils.js";
 let translationColumnsReady = false;
 
 // Ensure translation columns exist at module initialization
-async function ensureTranslationColumnsExist() {
+export async function ensureTranslationColumnsExist() {
   if (translationColumnsReady) return;
   try {
     const [rows] = await pool.query(
@@ -35,9 +35,6 @@ async function ensureTranslationColumnsExist() {
     console.warn('[DB] Warning: Translation columns may not exist:', err && err.message);
   }
 }
-
-// Trigger initialization
-ensureTranslationColumnsExist().catch(err => console.warn('[DB] Init error:', err));
 
 // Helper to extract translation fields or nulls if columns don't exist
 function getTranslationFieldsSQL(prefix = 'm') {

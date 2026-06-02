@@ -2,7 +2,7 @@ import { pool } from "../config/db.js";
 
 let cancelReasonColumnReady = false;
 
-async function ensureCancelReasonColumnExists() {
+export async function ensureCancelReasonColumnExists() {
   if (cancelReasonColumnReady) {
     return;
   }
@@ -22,10 +22,6 @@ async function ensureCancelReasonColumnExists() {
     console.warn("[DB] Warning: service_requests.cancel_reason may not exist:", error && error.message);
   }
 }
-
-ensureCancelReasonColumnExists().catch((error) => {
-  console.warn("[DB] cancel_reason column init error:", error && error.message);
-});
 
 export async function createServiceRequestRecord(payload) {
   const [result] = await pool.query(
