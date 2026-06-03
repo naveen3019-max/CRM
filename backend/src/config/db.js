@@ -1,7 +1,7 @@
 import mysql from "mysql2/promise";
-import { env } from "./env.js";
+import { env, getDatabaseStartupDiagnostics, getResolvedDatabaseConfig } from "./env.js";
 
-export const pool = mysql.createPool({
+const poolConfig = {
   host: env.dbHost,
   port: env.dbPort,
   user: env.dbUser,
@@ -19,7 +19,21 @@ export const pool = mysql.createPool({
   connectTimeout: env.dbConnectTimeoutMs,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0
-});
+};
+
+console.log("[Database] Resolved configuration before mysql.createPool():", getDatabaseStartupDiagnostics());
+
+if (!env.isExpectedRailwayPublicHost || !env.isExpectedRailwayPublicPort || env.usesStaleRailwayEndpoint) {
+  console.warn("[Database] Railway endpoint check:", {
+    expectedHost: "metro.proxy.rlwy.net",
+    expectedPort: 22437,
+    actualHost: env.dbHost,
+    actualPort: env.dbPort,
+    staleRailwayEndpointDetected: env.usesStaleRailwayEndpoint
+  });
+}
+
+export const pool = mysql.createPool(poolConfig);
 
 const transientConnectionErrorCodes = new Set([
   "ECONNRESET",
@@ -34,6 +48,23 @@ const transientConnectionErrorCodes = new Set([
 
 export function isTransientConnectionError(error) {
   return transientConnectionErrorCodes.has(error?.code);
+}
+
+export function serializeDatabaseError(error) {
+  if (!error) {
+    return null;
+  }
+
+  return {
+    name: error.name,
+    message: error.message,
+    code: error.code,
+    errno: error.errno,
+    sqlState: error.sqlState,
+    sqlMessage: error.sqlMessage,
+    fatal: error.fatal,
+    stack: error.stack
+  };
 }
 
 function wait(ms) {
@@ -52,6 +83,7 @@ export async function verifyDatabaseConnection() {
       console.log(`[Database] Connection verified on ${env.dbHost}:${env.dbPort}`);
       return;
     } catch (error) {
+      console.error(`[Database] SELECT 1 failed on attempt ${attempt}/${env.dbConnectRetries}:`, serializeDatabaseError(error));
       const shouldRetry = isTransientConnectionError(error) && attempt < env.dbConnectRetries;
 
       if (!shouldRetry) {
@@ -73,14 +105,19 @@ export async function verifyDatabaseConnection() {
 
 export function getDatabaseDebugSummary() {
   return {
-    host: env.dbHost,
-    port: env.dbPort,
-    database: env.dbName,
-    user: env.dbUser,
-    ssl: env.dbSsl,
+    ...getResolvedDatabaseConfig(),
     sslRejectUnauthorized: env.dbSslRejectUnauthorized,
     connectTimeoutMs: env.dbConnectTimeoutMs,
     connectRetries: env.dbConnectRetries,
-    connectRetryDelayMs: env.dbConnectRetryDelayMs
+    connectRetryDelayMs: env.dbConnectRetryDelayMs,
+    MYSQL_PUBLIC_URL_detected: env.mysqlPublicUrlDetected,
+    MYSQL_PUBLIC_URL_parsed: env.mysqlPublicUrlParsed,
+    MYSQL_PUBLIC_URL_host: env.mysqlPublicUrlHost || null,
+    MYSQL_PUBLIC_URL_port: env.mysqlPublicUrlPort,
+    expectedRailwayPublicHost: "metro.proxy.rlwy.net",
+    expectedRailwayPublicPort: 22437,
+    usingExpectedRailwayPublicHost: env.isExpectedRailwayPublicHost,
+    usingExpectedRailwayPublicPort: env.isExpectedRailwayPublicPort,
+    staleRailwayEndpointDetected: env.usesStaleRailwayEndpoint
   };
 }

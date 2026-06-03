@@ -61,16 +61,37 @@ function parseDatabaseUrl(rawUrl) {
   }
 }
 
+function findDatabaseUrlConfig() {
+  const candidates = [
+    { source: "MYSQL_PUBLIC_URL", rawUrl: process.env.MYSQL_PUBLIC_URL },
+    { source: "DATABASE_URL", rawUrl: process.env.DATABASE_URL },
+    { source: "MYSQL_URL", rawUrl: process.env.MYSQL_URL }
+  ];
+
+  for (const candidate of candidates) {
+    const parsed = parseDatabaseUrl(candidate.rawUrl);
+    if (parsed) {
+      return { ...candidate, parsed };
+    }
+  }
+
+  return null;
+}
+
+function hasAnyEnvValue(keys) {
+  return keys.some((key) => process.env[key]);
+}
+
 const uploadDirSetting = process.env.UPLOAD_DIR || "uploads";
 const resolvedUploadDir = path.isAbsolute(uploadDirSetting)
   ? uploadDirSetting
   : path.resolve(backendRoot, uploadDirSetting);
 
-const databaseUrlSource = process.env.MYSQL_PUBLIC_URL || process.env.DATABASE_URL || process.env.MYSQL_URL;
-const parsedDatabaseUrl = parseDatabaseUrl(databaseUrlSource);
+const databaseUrlConfig = findDatabaseUrlConfig();
+const parsedDatabaseUrl = databaseUrlConfig?.parsed || null;
 const inferredDbSsl = Boolean(
   parsedDatabaseUrl?.host?.endsWith(".proxy.rlwy.net") ||
-  (process.env.MYSQL_PUBLIC_URL && process.env.MYSQL_PUBLIC_URL === databaseUrlSource)
+  databaseUrlConfig?.source === "MYSQL_PUBLIC_URL"
 );
 const hasLocalDbOverride = Boolean(
   process.env.LOCAL_DB_HOST ||
@@ -86,6 +107,13 @@ const fallbackDbPort = Number(process.env.LOCAL_DB_PORT || 3306);
 const fallbackDbName = process.env.LOCAL_DB_NAME || "verbena_crm";
 const fallbackDbUser = process.env.LOCAL_DB_USER || "root";
 const fallbackDbPassword = process.env.LOCAL_DB_PASSWORD || "";
+const dbStarKeys = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"];
+const mysqlStarKeys = ["MYSQLHOST", "MYSQLPORT", "MYSQLDATABASE", "MYSQLUSER", "MYSQLPASSWORD", "MYSQL_ROOT_PASSWORD"];
+const databaseConfigSource = shouldUseLocalDbFallback
+  ? "LOCAL_DB_*"
+  : databaseUrlConfig?.source || (hasAnyEnvValue(dbStarKeys) ? "DB_*" : hasAnyEnvValue(mysqlStarKeys) ? "MYSQL*" : "unset");
+const mysqlPublicUrlParsed = parseDatabaseUrl(process.env.MYSQL_PUBLIC_URL);
+const staleRailwayHosts = ["acela.proxy.rlwy.net", "mysql.railway.internal"];
 
 export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
@@ -119,6 +147,14 @@ export const env = {
   dbConnectTimeoutMs: parsePositiveInteger(process.env.DB_CONNECT_TIMEOUT_MS, 10000),
   dbConnectRetries: parsePositiveInteger(process.env.DB_CONNECT_RETRIES, 5),
   dbConnectRetryDelayMs: parsePositiveInteger(process.env.DB_CONNECT_RETRY_DELAY_MS, 1500),
+  dbConfigSource: databaseConfigSource,
+  mysqlPublicUrlDetected: Boolean(process.env.MYSQL_PUBLIC_URL),
+  mysqlPublicUrlParsed: Boolean(mysqlPublicUrlParsed),
+  mysqlPublicUrlHost: mysqlPublicUrlParsed?.host || "",
+  mysqlPublicUrlPort: mysqlPublicUrlParsed?.port || null,
+  isExpectedRailwayPublicHost: (parsedDatabaseUrl?.host || process.env.DB_HOST || process.env.MYSQLHOST || "") === "metro.proxy.rlwy.net",
+  isExpectedRailwayPublicPort: Number(parsedDatabaseUrl?.port || process.env.DB_PORT || process.env.MYSQLPORT || 3306) === 22437,
+  usesStaleRailwayEndpoint: staleRailwayHosts.includes(parsedDatabaseUrl?.host || process.env.DB_HOST || process.env.MYSQLHOST || ""),
   allowStartWithoutDb: parseBoolean(process.env.ALLOW_START_WITHOUT_DB, false),
   uploadDir: resolvedUploadDir,
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
@@ -139,4 +175,31 @@ export function validateEnv() {
     });
     throw new Error("Database configuration environment variables are missing.");
   }
+}
+
+export function getResolvedDatabaseConfig() {
+  return {
+    host: env.dbHost,
+    port: env.dbPort,
+    database: env.dbName,
+    user: env.dbUser,
+    ssl: env.dbSsl,
+    source: env.dbConfigSource
+  };
+}
+
+export function getDatabaseStartupDiagnostics() {
+  return {
+    ...getResolvedDatabaseConfig(),
+    sslRejectUnauthorized: env.dbSslRejectUnauthorized,
+    MYSQL_PUBLIC_URL_detected: env.mysqlPublicUrlDetected,
+    MYSQL_PUBLIC_URL_parsed: env.mysqlPublicUrlParsed,
+    MYSQL_PUBLIC_URL_host: env.mysqlPublicUrlHost || null,
+    MYSQL_PUBLIC_URL_port: env.mysqlPublicUrlPort,
+    expectedRailwayPublicHost: "metro.proxy.rlwy.net",
+    expectedRailwayPublicPort: 22437,
+    usingExpectedRailwayPublicHost: env.isExpectedRailwayPublicHost,
+    usingExpectedRailwayPublicPort: env.isExpectedRailwayPublicPort,
+    staleRailwayEndpointDetected: env.usesStaleRailwayEndpoint
+  };
 }

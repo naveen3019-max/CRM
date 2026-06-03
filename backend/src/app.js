@@ -7,7 +7,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
-import { env } from "./config/env.js";
+import { env, getResolvedDatabaseConfig } from "./config/env.js";
 import { errorMiddleware, notFoundMiddleware } from "./middleware/error.middleware.js";
 import { apiRouter } from "./routes/index.js";
 import { createCorsOriginChecker } from "./utils/cors.js";
@@ -70,6 +70,10 @@ app.get("/api/health/database", async (req, res) => {
   } catch (error) {
     res.status(503).json({ success: false, database: "disconnected", error: error.message });
   }
+});
+
+app.get("/api/debug/database-config", (req, res) => {
+  res.json(getResolvedDatabaseConfig());
 });
 
 app.get("/", (req, res) => {
