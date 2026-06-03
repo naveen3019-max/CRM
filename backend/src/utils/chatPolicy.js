@@ -27,14 +27,19 @@ export function validateConversationScope(scope, roleA, roleB) {
     throw new ApiError(400, "Unsupported chat scope");
   }
 
-  const provided = [normalizeRole(roleA), normalizeRole(roleB)].sort().join(":");
-  const expected = [...expandChatRoles(allowed)].sort().join(":");
+  const providedA = normalizeRole(roleA);
+  const providedB = normalizeRole(roleB);
+  const allowedA = normalizeRole(allowed[0]);
+  const allowedB = normalizeRole(allowed[1]);
+
+  const provided = [providedA, providedB].sort().join(":");
+  const expected = [allowedA, allowedB].sort().join(":");
 
   if (provided !== expected) {
     console.debug("[chatPolicy] scope denied", {
       scope,
-      roleA: normalizeRole(roleA),
-      roleB: normalizeRole(roleB),
+      roleA: providedA,
+      roleB: providedB,
       expected,
       provided
     });
@@ -83,10 +88,12 @@ export function getAvailableChatRolesForRole(actorRole) {
 }
 
 export function getConversationScopeForRoles(roleA, roleB) {
-  const provided = [normalizeRole(roleA), normalizeRole(roleB)].sort().join(":");
+  const providedA = normalizeRole(roleA);
+  const providedB = normalizeRole(roleB);
+  const provided = [providedA, providedB].sort().join(":");
 
   for (const [scope, roles] of Object.entries(allowedScopes)) {
-    const expected = [...expandChatRoles(roles)].sort().join(":");
+    const expected = [normalizeRole(roles[0]), normalizeRole(roles[1])].sort().join(":");
     if (provided === expected) {
       return scope;
     }
