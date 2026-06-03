@@ -19,10 +19,6 @@ services:
         value: 8h
       - key: MYSQL_PUBLIC_URL
         sync: false
-      - key: MYSQL_URL
-        sync: false
-      - key: MYSQL_ROOT_PASSWORD
-        sync: false
       - key: DB_SSL
         value: true
       - key: DB_SSL_REJECT_UNAUTHORIZED

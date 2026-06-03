@@ -142,8 +142,6 @@ This script creates/updates schema and applies seeds idempotently.
 Database connection env vars supported by the backend:
 
 - MYSQL_PUBLIC_URL
-- MYSQL_URL
-- DATABASE_URL
 - DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD
 
 The seeded admin account is:
@@ -209,8 +207,8 @@ This repository now includes [render.yaml](render.yaml) for backend deployment.
 1. Push this repository to GitHub.
 1. In Render, choose New > Blueprint.
 1. Select this repo and confirm [render.yaml](render.yaml).
-1. Set environment values in Render: CLIENT_URL, JWT_SECRET, MYSQL_PUBLIC_URL, MYSQL_URL, MYSQL_ROOT_PASSWORD, DB_SSL, DB_SSL_REJECT_UNAUTHORIZED.
-1. Prefer MYSQL_PUBLIC_URL for the public Railway endpoint and MYSQL_URL for the internal Railway endpoint.
+1. Set environment values in Render: CLIENT_URL, JWT_SECRET, MYSQL_PUBLIC_URL, DB_SSL, DB_SSL_REJECT_UNAUTHORIZED.
+1. Use MYSQL_PUBLIC_URL for the public Railway endpoint. Do not use Railway's internal MySQL URL on Render.
 1. Set DB_SSL=true for the Railway public proxy URL and DB_SSL_REJECT_UNAUTHORIZED=false if the provider uses a self-signed or proxied certificate.
 1. Deploy service.
 1. Run one manual shell command in Render service shell:

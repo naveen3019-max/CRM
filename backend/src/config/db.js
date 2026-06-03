@@ -1,5 +1,10 @@
 import mysql from "mysql2/promise";
-import { env, getDatabaseStartupDiagnostics, getResolvedDatabaseConfig } from "./env.js";
+import {
+  env,
+  getDatabaseStartupDiagnostics,
+  getRawDatabaseEnvDiagnostics,
+  getResolvedDatabaseConfig
+} from "./env.js";
 
 const poolConfig = {
   host: env.dbHost,
@@ -21,6 +26,16 @@ const poolConfig = {
   keepAliveInitialDelay: 0
 };
 
+const rawDatabaseEnvDiagnostics = getRawDatabaseEnvDiagnostics();
+console.log("MYSQL_PUBLIC_URL:", rawDatabaseEnvDiagnostics.MYSQL_PUBLIC_URL);
+console.log("MYSQL_URL:", rawDatabaseEnvDiagnostics.MYSQL_URL);
+console.log("DATABASE_URL:", rawDatabaseEnvDiagnostics.DATABASE_URL);
+console.log("Resolved Database Config:", {
+  host: env.dbHost,
+  port: env.dbPort,
+  database: env.dbName,
+  user: env.dbUser
+});
 console.log("[Database] Resolved configuration before mysql.createPool():", getDatabaseStartupDiagnostics());
 
 if (!env.isExpectedRailwayPublicHost || !env.isExpectedRailwayPublicPort || env.usesStaleRailwayEndpoint) {
@@ -80,7 +95,10 @@ export async function verifyDatabaseConnection() {
     try {
       connection = await pool.getConnection();
       await connection.query("SELECT 1");
-      console.log(`[Database] Connection verified on ${env.dbHost}:${env.dbPort}`);
+      console.log("[Database] Connection verified successfully");
+      console.log(`Host: ${env.dbHost}`);
+      console.log(`Port: ${env.dbPort}`);
+      console.log(`staleRailwayEndpointDetected: ${env.usesStaleRailwayEndpoint}`);
       return;
     } catch (error) {
       console.error(`[Database] SELECT 1 failed on attempt ${attempt}/${env.dbConnectRetries}:`, serializeDatabaseError(error));

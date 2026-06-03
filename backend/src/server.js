@@ -10,6 +10,27 @@ import { ensureCancelReasonColumnExists } from "./repositories/serviceRequest.re
 import { ensureWorkAssignmentsTableExists } from "./repositories/workAssignment.repository.js";
 import { initSocketServer } from "./sockets/index.js";
 
+async function runDatabaseStartupTasks() {
+  try {
+    await verifyDatabaseConnection();
+    await ensureGroupChatSchema();
+    await ensureTranslationColumnsExist();
+    await ensureCancelReasonColumnExists();
+    await ensureWorkAssignmentsTableExists();
+  } catch (error) {
+    const dbSummary = getDatabaseDebugSummary();
+    console.error("Database startup task failed. Config summary:", dbSummary);
+
+    if (error?.code === "PROTOCOL_CONNECTION_LOST") {
+      console.error(
+        "Database handshake failed. Verify DB endpoint points to a MySQL service and credentials/port match the Railway public MySQL endpoint."
+      );
+    }
+
+    console.error("Database startup task error:", error);
+  }
+}
+
 async function bootstrap() {
   validateEnv();
 
@@ -18,26 +39,13 @@ async function bootstrap() {
     fs.mkdirSync(uploadPath, { recursive: true });
   }
 
-  try {
-    await verifyDatabaseConnection();
-    await ensureGroupChatSchema();
-    await ensureTranslationColumnsExist();
-    await ensureCancelReasonColumnExists();
-    await ensureWorkAssignmentsTableExists();
-  } catch (error) {
-    if (!env.allowStartWithoutDb) {
-      throw error;
-    }
-
-    console.warn("Database unavailable at startup. Continuing because ALLOW_START_WITHOUT_DB=true.");
-  }
-
   const server = http.createServer(app);
   initSocketServer(server);
 
   return new Promise((resolve) => {
     server.listen(env.port, "0.0.0.0", () => {
       console.log(`Server listening on port ${env.port} and binding to 0.0.0.0`);
+      runDatabaseStartupTasks();
       resolve(server);
     });
   });
@@ -55,15 +63,6 @@ process.on("uncaughtException", (error) => {
 });
 
 bootstrap().catch((error) => {
-  const dbSummary = getDatabaseDebugSummary();
-  console.error("Database config summary:", dbSummary);
-
-  if (error?.code === "PROTOCOL_CONNECTION_LOST") {
-    console.error(
-      "Database handshake failed. Verify DB endpoint points to a MySQL service (not Postgres) and credentials/port match Railway MYSQLHOST/MYSQLPORT/MYSQLDATABASE/MYSQLUSER/MYSQLPASSWORD."
-    );
-  }
-
   console.error("Failed to start backend", error);
   process.exit(1);
 });
