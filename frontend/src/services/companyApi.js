@@ -23,9 +23,7 @@ export const companyApi = {
   register: (data) => api.post('/company/register', data),
   login: (data) => api.post('/company/login', data),
   updateBusiness: (data) => api.post('/company/business-info', data),
-  uploadDocument: (formData) => api.post('/company/upload-document', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
+  uploadDocument: (formData) => api.post('/company/upload-document', formData),
   getStatus: () => api.get('/company/status'),
   
   // Admin endpoints
