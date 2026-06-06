@@ -99,7 +99,11 @@ function redactDatabaseUrl(rawUrl) {
 }
 
 function findDatabaseUrlConfig() {
-  const candidates = [{ source: "MYSQL_PUBLIC_URL", rawUrl: process.env.MYSQL_PUBLIC_URL }];
+  const candidates = [
+    { source: "DATABASE_URL", rawUrl: process.env.DATABASE_URL },
+    { source: "MYSQL_URL", rawUrl: process.env.MYSQL_URL },
+    { source: "MYSQL_PUBLIC_URL", rawUrl: process.env.MYSQL_PUBLIC_URL }
+  ];
 
   for (const candidate of candidates) {
     const parsed = parseDatabaseUrl(candidate.rawUrl);
@@ -188,6 +192,8 @@ export const env = {
   dbConnectRetryDelayMs: parsePositiveInteger(process.env.DB_CONNECT_RETRY_DELAY_MS, 1500),
   dbConfigSource: databaseConfigSource,
   mysqlPublicUrlDetected: Boolean(process.env.MYSQL_PUBLIC_URL),
+  mysqlUrlDetected: Boolean(process.env.MYSQL_URL),
+  databaseUrlDetected: Boolean(process.env.DATABASE_URL),
   mysqlPublicUrlParsed: Boolean(mysqlPublicUrlParsed),
   mysqlPublicUrlHost: mysqlPublicUrlParsed?.host || "",
   mysqlPublicUrlPort: mysqlPublicUrlParsed?.port || null,
