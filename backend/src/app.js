@@ -8,6 +8,7 @@ import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
 import { env, getResolvedDatabaseConfig } from "./config/env.js";
+import { isCloudinaryConfigured } from "./config/cloudinary.js";
 import { errorMiddleware, notFoundMiddleware } from "./middleware/error.middleware.js";
 import { apiRouter } from "./routes/index.js";
 import { createCorsOriginChecker } from "./utils/cors.js";
@@ -74,6 +75,15 @@ app.get("/api/health/database", async (req, res) => {
 
 app.get("/api/debug/database-config", (req, res) => {
   res.json(getResolvedDatabaseConfig());
+});
+
+app.get('/api/debug/cloudinary', (req, res) => {
+  res.json({
+    success: true,
+    isConfigured: Boolean(isCloudinaryConfigured),
+    cloudName: env.cloudinaryCloudName || null,
+    cloudinaryUrlPresent: Boolean(env.cloudinaryUrl)
+  });
 });
 
 app.get("/", (req, res) => {
