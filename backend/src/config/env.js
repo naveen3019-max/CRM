@@ -61,6 +61,27 @@ function parseDatabaseUrl(rawUrl) {
   }
 }
 
+function parseCloudinaryUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== "string") {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(rawUrl);
+    if (!parsed.protocol.startsWith("cloudinary")) {
+      return null;
+    }
+
+    return {
+      cloudName: parsed.hostname || "",
+      apiKey: decodeURIComponent(parsed.username || ""),
+      apiSecret: decodeURIComponent(parsed.password || "")
+    };
+  } catch {
+    return null;
+  }
+}
+
 function redactDatabaseUrl(rawUrl) {
   if (!rawUrl || typeof rawUrl !== "string") {
     return rawUrl || "";
@@ -180,9 +201,22 @@ export const env = {
   usesStaleRailwayEndpoint: staleRailwayEndpointDetected,
   allowStartWithoutDb: parseBoolean(process.env.ALLOW_START_WITHOUT_DB, false),
   uploadDir: resolvedUploadDir,
-  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
-  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || "",
-  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || "",
+  cloudinaryUrl: process.env.CLOUDINARY_URL || "",
+  cloudinaryCloudName:
+    process.env.CLOUDINARY_CLOUD_NAME ||
+    process.env.CLOUDINARY_NAME ||
+    parseCloudinaryUrl(process.env.CLOUDINARY_URL)?.cloudName ||
+    "",
+  cloudinaryApiKey:
+    process.env.CLOUDINARY_API_KEY ||
+    process.env.CLOUDINARY_KEY ||
+    parseCloudinaryUrl(process.env.CLOUDINARY_URL)?.apiKey ||
+    "",
+  cloudinaryApiSecret:
+    process.env.CLOUDINARY_API_SECRET ||
+    process.env.CLOUDINARY_SECRET ||
+    parseCloudinaryUrl(process.env.CLOUDINARY_URL)?.apiSecret ||
+    "",
   cloudinaryFolder: process.env.CLOUDINARY_FOLDER || "verbena/company-documents"
 };
 
