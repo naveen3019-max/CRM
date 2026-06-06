@@ -42,7 +42,11 @@ export async function signupUser(payload) {
     mobile: payload.mobile,
     workType: payload.workType,
     serviceCategory: payload.workType || null,
-    preferredLanguage: payload.preferredLanguage || "en"
+    preferredLanguage: payload.preferredLanguage || "en",
+    country: payload.country || null,
+    state: payload.state || null,
+    city: payload.city || null,
+    pincode: payload.pincode || null
   });
 
   if (role === ROLES.VENDOR) {
@@ -68,6 +72,10 @@ export async function signupUser(payload) {
         role: normalizeRole(role),
         phone: null,
         mobile: payload.mobile,
+        country: payload.country || null,
+        state: payload.state || null,
+        city: payload.city || null,
+        pincode: payload.pincode || null,
         serviceCategory: payload.workType || null,
         preferredLanguage: payload.preferredLanguage || "en",
         profileCompleted: false,
@@ -92,6 +100,10 @@ export async function signupUser(payload) {
       role: normalizeRole(role),
       phone: null,
       mobile: payload.mobile,
+      country: payload.country || null,
+      state: payload.state || null,
+      city: payload.city || null,
+      pincode: payload.pincode || null,
       serviceCategory: payload.workType || null,
       preferredLanguage: payload.preferredLanguage || "en",
       profileCompleted: false
@@ -135,6 +147,9 @@ export async function loginUser(payload) {
       role: normalizeRole(user.role),
       phone: user.phone || null,
       mobile: user.mobile || null,
+      country: user.country || null,
+      state: user.state || null,
+      city: user.city || null,
       serviceCategory: user.service_category || user.work_type || null,
       preferredLanguage: user.preferredLanguage || "en",
       profileCompleted: Boolean(user.profile_completed),
@@ -162,6 +177,7 @@ export async function getUserProfile(actorId) {
     role: normalizeRole(user.role),
     phone: user.phone || null,
     mobile: user.mobile || null,
+    country: user.country || null,
     state: user.state || null,
     city: user.city || null,
     pincode: user.pincode || null,
@@ -204,6 +220,7 @@ export async function updateUserProfile(actorId, payload) {
     ...(payload.name !== undefined && { name: payload.name }),
     ...(payload.phone !== undefined && { phone: payload.phone }),
     ...(payload.mobile !== undefined && { mobile: payload.mobile }),
+    ...(payload.country !== undefined && { country: payload.country }),
     ...(payload.state !== undefined && { state: payload.state }),
     ...(payload.city !== undefined && { city: payload.city }),
     ...(payload.pincode !== undefined && { pincode: payload.pincode }),
@@ -226,6 +243,7 @@ export async function updateUserProfile(actorId, payload) {
     role: normalizeRole(updated.role),
     phone: updated.phone || null,
     mobile: updated.mobile || null,
+    country: updated.country || null,
     state: updated.state || null,
     city: updated.city || null,
     pincode: updated.pincode || null,

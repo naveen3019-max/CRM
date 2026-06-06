@@ -4,14 +4,15 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import apiClient from "../services/apiClient";
 import { useAuth } from "../context/AuthContext.jsx";
+import { indiaLocations } from "../utils/indiaLocations.js";
 
 const roleOptions = [
   { value: "customer",    label: "Customer",    desc: "Services & support" },
-  { value: "sales",       label: "Sales",        desc: "Leads & deals" },
-  { value: "vendor",      label: "Vendor",       desc: "Supply & inventory" },
+  { value: "sales",       label: "Sales Partner", desc: "Leads & deals" },
+  { value: "vendor",      label: "Supplier",     desc: "Supply & inventory" },
   { value: "electrician", label: "Electrician",  desc: "Field operations" },
   { value: "field_work",  label: "Field Work",   desc: "On-site tasks" },
-  { value: "other",       label: "Other",       desc: "Plumber, painter, carpenter, and more" },
+  { value: "other",       label: "Other Services", desc: "Plumber, painter, carpenter, and more" },
 ];
 
 // Feature icon mapping for consistent visual language
@@ -77,7 +78,7 @@ const roleInformation = {
   },
   sales: {
     icon: BriefcaseBusiness,
-    title: "Sales & Lead Management",
+    title: "Sales Partner Account",
     description: "Discover and manage sales leads, gather client information, and keep the admin team informed about new opportunities and prospecting activities.",
     features: [
       "Find and discover new leads",
@@ -93,16 +94,19 @@ const roleInformation = {
       "Opportunity Tracking"
     ],
     benefits: [
-      "Organized lead pipeline",
-      "Better opportunity visibility",
-      "Efficient lead management",
-      "Real-time admin coordination"
+      "Earn through lead generation",
+      "Connect customers with suppliers",
+      "Track opportunities",
+      "Build professional connections",
+      "Increase commission earnings",
+      "Generate recurring income",
+      "Grow your sales career"
     ],
     importantNote: "Sales teams discover leads, collect prospect information, and keep admins informed to ensure timely follow-up and conversion."
   },
   vendor: {
     icon: Building2,
-    title: "Vendor Account",
+    title: "Supplier Account",
     description: "Supply materials, support operational tasks, coordinate logistics, and assist ongoing service execution.",
     features: [
       "Manage material support",
@@ -118,12 +122,15 @@ const roleInformation = {
       "Completion Confirmation"
     ],
     benefits: [
-      "Organized supply tracking",
-      "Faster coordination",
-      "Real-time operational updates",
-      "Better delivery visibility"
+      "Get customer enquiries",
+      "Receive business opportunities",
+      "Connect with verified customers",
+      "Grow your business network",
+      "Receive more orders",
+      "Increase monthly revenue",
+      "Expand your customer base"
     ],
-    importantNote: "Vendors support operations and logistics, not customer-facing communication."
+    importantNote: "Suppliers support operations and logistics, not customer-facing communication."
   },
   electrician: {
     icon: Zap,
@@ -143,16 +150,19 @@ const roleInformation = {
       "Submit Completion"
     ],
     benefits: [
-      "Clear job assignments",
-      "Realtime coordination",
-      "Faster work execution",
-      "Organized field workflow"
+      "Receive electrical work assignments",
+      "Get more local customers",
+      "Increase work opportunities",
+      "Build a professional profile",
+      "Earn from completed projects",
+      "Grow your reputation",
+      "Expand service coverage"
     ],
     importantNote: "Electricians receive assignments through admin/sales coordination."
   },
   field_work: {
     icon: HardHat,
-    title: "Field Operations Account",
+    title: "Field Work Account",
     description: "Handle onsite operational tasks, monitor field activities, coordinate teams, and report realtime progress.",
     features: [
       "Manage field activities",
@@ -168,16 +178,18 @@ const roleInformation = {
       "Task Completion"
     ],
     benefits: [
-      "Structured field operations",
-      "Live team coordination",
-      "Better task visibility",
-      "Faster reporting workflow"
+      "Receive daily work opportunities",
+      "Get assignments from businesses",
+      "Increase income opportunities",
+      "Build work experience",
+      "Grow your professional profile",
+      "Earn from completed tasks"
     ],
     importantNote: "Field operations teams work alongside assigned technical and support teams."
   },
   other: {
     icon: Wrench,
-    title: "Service Professional Account",
+    title: "Other Services Account",
     description: "Join the workforce network to receive nearby service assignments based on your expertise and location.",
     features: [
       "Receive nearby jobs",
@@ -193,10 +205,12 @@ const roleInformation = {
       "Completion Update"
     ],
     benefits: [
-      "Nearby work opportunities",
-      "Organized assignments",
-      "Realtime coordination",
-      "Better service management"
+      "Receive customer requests",
+      "Get service opportunities",
+      "Build your client base",
+      "Increase visibility",
+      "Grow your business",
+      "Earn more through the platform"
     ],
     importantNote: "Service professionals receive work assignments through the operations platform."
   }
@@ -211,11 +225,18 @@ const highlights = [
 
 const industries = ["Manufacturing", "Education", "Retail", "Pharma", "Insurance", "Forestry"];
 
+
+
 export default function RegisterPage() {
   const [name, setName]               = useState("");
   const [email, setEmail]             = useState("");
   const [password, setPassword]       = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [mobile, setMobile]           = useState("");
+  const [stateVal, setStateVal]       = useState("");
+  const [city, setCity]               = useState("");
+  const [pincode, setPincode]         = useState("");
   const [workType, setWorkType]       = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole]               = useState("customer");
@@ -243,12 +264,26 @@ export default function RegisterPage() {
       return /^\d{10}$/.test(value) ? "" : "Mobile number must be exactly 10 digits";
     }
 
-    
-
     if (field === "password") {
       return /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/.test(value)
         ? ""
         : "Password must be at least 8 characters, with 1 uppercase letter and 1 number";
+    }
+
+    if (field === "confirmPassword") {
+      return value === password ? "" : "Passwords do not match";
+    }
+
+    if (field === "state") {
+      return value ? "" : "State is required";
+    }
+
+    if (field === "city") {
+      return value ? "" : "City / District is required";
+    }
+
+    if (field === "pincode") {
+      return /^\d{6}$/.test(value) ? "" : "Enter a valid 6-digit pincode";
     }
 
     if (field === "workType") {
@@ -264,6 +299,10 @@ export default function RegisterPage() {
       email: validateField("email", email),
       mobile: validateField("mobile", mobile),
       password: validateField("password", password),
+      confirmPassword: validateField("confirmPassword", confirmPassword),
+      state: validateField("state", stateVal),
+      city: validateField("city", city),
+      pincode: validateField("pincode", pincode),
       ...(role === "other" ? { workType: validateField("workType", workType) } : {})
     };
 
@@ -289,19 +328,24 @@ export default function RegisterPage() {
         mobile,
         role: submitRole,
         preferredLanguage: (i18n.language || "en").split("-")[0],
+        country: "India",
+        state: stateVal,
+        city,
+        pincode,
         ...(role === "other" ? { workType } : {})
       });
       const payload = res.data.data;
       login(payload);
-      
-      // Check if profile is complete
-      if (!payload.user.profileCompleted) {
-        navigate("/profile-completion", { replace: true });
-      } else if (payload.user.role === "vendor") {
-        navigate("/onboarding", { replace: true });
-      } else {
-        navigate(`/${payload.user.role}`, { replace: true });
-      }
+
+      const roleRouteMap = {
+        customer:    "/customer",
+        sales:       "/sales",
+        vendor:      "/vendor",
+        electrician: "/electrician",
+        field_work:  "/field_work",
+        other:       "/field_work",
+      };
+      navigate(roleRouteMap[payload.user.role] || "/customer", { replace: true });
     } catch (err) {
       const details = err.response?.data?.details;
       setError(
@@ -322,7 +366,7 @@ export default function RegisterPage() {
       <div className="vt-split">
 
         {/* ── LEFT: Dynamic Role Information Panel ── */}
-        <aside className="vt-about vt-fadein" style={{ "--d": "0ms" }}>
+        <aside id="role-info-section" className="vt-about vt-fadein" style={{ "--d": "0ms" }}>
           <div className="vt-brand">
             <span className="vt-brand-dot" />
             <span className="vt-brand-wordmark">Verbena Tech</span>
@@ -551,7 +595,109 @@ export default function RegisterPage() {
                 {fieldErrors.mobile && <p className="mt-1 text-xs text-red-600">{fieldErrors.mobile}</p>}
               </div>
 
-              {/* Address field removed per request */}
+              {/* State select — India only, always visible */}
+              <div className="vt-field">
+                <label className="vt-label" style={{ fontSize: "12px", fontWeight: "600", letterSpacing: "0.3px" }}>State</label>
+                <div className="vt-input-shell" style={{ transition: "all 0.2s ease", marginTop: "8px" }}>
+                  <MapPin className="vt-i-icon" size={15} style={{ transition: "color 0.2s ease" }} />
+                  <select
+                    className="vt-inp"
+                    value={stateVal}
+                    onChange={(e) => {
+                      const s = e.target.value;
+                      setStateVal(s);
+                      setCity("");
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        state: validateField("state", s),
+                        city: ""
+                      }));
+                    }}
+                    required
+                    style={{
+                      background: "transparent",
+                      color: stateVal ? "rgba(226, 232, 240, 0.95)" : "rgba(148, 163, 184, 0.65)",
+                      outline: "none",
+                      border: "none",
+                      width: "100%",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <option value="" style={{ background: "#07090f", color: "rgba(148, 163, 184, 0.65)" }}>Select State / UT</option>
+                    {Object.keys(indiaLocations).sort().map((s) => (
+                      <option key={s} value={s} style={{ background: "#07090f", color: "#e2e8f0" }}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                {fieldErrors.state && <p className="mt-1 text-xs text-red-600">{fieldErrors.state}</p>}
+              </div>
+
+              {/* City / District select — shown after state selected */}
+              {stateVal && (
+                <div className="vt-field">
+                  <label className="vt-label" style={{ fontSize: "12px", fontWeight: "600", letterSpacing: "0.3px" }}>District / City</label>
+                  <div className="vt-input-shell" style={{ transition: "all 0.2s ease", marginTop: "8px" }}>
+                    <MapPin className="vt-i-icon" size={15} style={{ transition: "color 0.2s ease" }} />
+                    <select
+                      className="vt-inp"
+                      value={city}
+                      onChange={(e) => {
+                        const ct = e.target.value;
+                        setCity(ct);
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          city: validateField("city", ct)
+                        }));
+                      }}
+                      required
+                      style={{
+                        background: "transparent",
+                        color: city ? "rgba(226, 232, 240, 0.95)" : "rgba(148, 163, 184, 0.65)",
+                        outline: "none",
+                        border: "none",
+                        width: "100%",
+                        cursor: "pointer"
+                      }}
+                    >
+                      <option value="" style={{ background: "#07090f", color: "rgba(148, 163, 184, 0.65)" }}>Select District / City</option>
+                      {(indiaLocations[stateVal] || []).map((ct) => (
+                        <option key={ct} value={ct} style={{ background: "#07090f", color: "#e2e8f0" }}>{ct}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {fieldErrors.city && <p className="mt-1 text-xs text-red-600">{fieldErrors.city}</p>}
+                </div>
+              )}
+
+              {/* Pincode */}
+              <div className="vt-field">
+                <label className="vt-label" style={{ fontSize: "12px", fontWeight: "600", letterSpacing: "0.3px" }} htmlFor="reg-pincode">
+                  Pincode
+                  <span className="vt-label-hint"> · 6-digit area code</span>
+                </label>
+                <div className="vt-input-shell" style={{ transition: "all 0.2s ease", marginTop: "8px" }}>
+                  <MapPin className="vt-i-icon" size={15} style={{ transition: "color 0.2s ease" }} />
+                  <input
+                    id="reg-pincode"
+                    className="vt-inp"
+                    type="text"
+                    inputMode="numeric"
+                    value={pincode}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      setPincode(val);
+                      setFieldErrors((prev) => ({ ...prev, pincode: validateField("pincode", val) }));
+                    }}
+                    placeholder="560001"
+                    required
+                    maxLength={6}
+                    onBlur={() => setFieldErrors((prev) => ({ ...prev, pincode: validateField("pincode", pincode) }))}
+                    aria-invalid={Boolean(fieldErrors.pincode)}
+                    style={{ transition: "all 0.2s ease" }}
+                  />
+                </div>
+                {fieldErrors.pincode && <p className="mt-1 text-xs text-red-600">{fieldErrors.pincode}</p>}
+              </div>
 
               {/* Password */}
               <div className="vt-field">
@@ -584,6 +730,38 @@ export default function RegisterPage() {
                 {fieldErrors.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>}
               </div>
 
+              {/* Confirm Password */}
+              <div className="vt-field">
+                <label className="vt-label" style={{ fontSize: "12px", fontWeight: "600", letterSpacing: "0.3px" }} htmlFor="reg-confirm-password">
+                  Confirm Password
+                </label>
+                <div className="vt-input-shell" style={{ transition: "all 0.2s ease", marginTop: "8px" }}>
+                  <Lock className="vt-i-icon" size={15} style={{ transition: "color 0.2s ease" }} />
+                  <input
+                    id="reg-confirm-password"
+                    className="vt-inp"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        confirmPassword: e.target.value === password ? "" : "Passwords do not match"
+                      }));
+                    }}
+                    placeholder="••••••••"
+                    required
+                    onBlur={() => setFieldErrors((prev) => ({ ...prev, confirmPassword: validateField("confirmPassword", confirmPassword) }))}
+                    aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                    style={{ transition: "all 0.2s ease" }}
+                  />
+                  <button type="button" className="vt-toggle-pw" onClick={() => setShowConfirmPassword(!showConfirmPassword)} tabIndex={-1} style={{ transition: "all 0.2s ease" }}>
+                    {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+                {fieldErrors.confirmPassword && <p className="mt-1 text-xs text-red-600">{fieldErrors.confirmPassword}</p>}
+              </div>
+
               {/* Role */}
               <div className="vt-field">
                 <label className="vt-label" style={{ fontSize: "12px", fontWeight: "600", letterSpacing: "0.3px" }}>{t("auth.role")}</label>
@@ -594,7 +772,13 @@ export default function RegisterPage() {
                       <button
                         key={value}
                         type="button"
-                        onClick={() => setRole(value)}
+                        onClick={() => {
+                          setRole(value);
+                          setTimeout(() => {
+                            const el = document.getElementById("role-info-section");
+                            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }, 100);
+                        }}
                         className={`vt-role-pill${role === value ? " vt-role-pill-on" : ""}`}
                         style={{
                           transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",

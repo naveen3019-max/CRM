@@ -16,7 +16,11 @@ export const signupValidation = [
     .withMessage("Password must include one number"),
   body("workType").optional({ nullable: true }).trim().isLength({ min: 2, max: 255 }).withMessage("Work type must be between 2 and 255 characters"),
   body("role").optional().isIn(Object.values(ROLES)).withMessage("Invalid role selected"),
-  body("preferredLanguage").optional().isIn(LANGUAGE_CODES).withMessage("Invalid preferred language")
+  body("preferredLanguage").optional().isIn(LANGUAGE_CODES).withMessage("Invalid preferred language"),
+  body("country").optional({ nullable: true }).trim().isLength({ min: 2, max: 100 }).withMessage("Country must be between 2 and 100 characters"),
+  body("state").trim().isLength({ min: 2, max: 100 }).withMessage("State must be between 2 and 100 characters"),
+  body("city").trim().isLength({ min: 2, max: 100 }).withMessage("City must be between 2 and 100 characters"),
+  body("pincode").trim().matches(/^\d{6}$/).withMessage("Pincode must be exactly 6 digits")
 ];
 
 export const loginValidation = [
@@ -28,6 +32,7 @@ export const updateProfileValidation = [
   body("name").optional().trim().isLength({ min: 2, max: 100 }),
   body("phone").optional({ nullable: true }).trim().isLength({ min: 7, max: 30 }),
   body("mobile").optional({ nullable: true }).trim().matches(/^\d{10}$/).withMessage("Mobile must be 10 digits"),
+  body("country").optional({ nullable: true }).trim().isLength({ min: 2, max: 100 }),
   body("state").optional({ nullable: true }).trim().isLength({ min: 2, max: 100 }),
   body("city").optional({ nullable: true }).trim().isLength({ min: 2, max: 100 }),
   body("pincode").optional({ nullable: true }).trim().isLength({ min: 5, max: 10 }),

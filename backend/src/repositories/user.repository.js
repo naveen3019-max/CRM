@@ -74,7 +74,7 @@ async function ensureLastSeenColumnExists() {
 
 export async function findUserByEmail(email) {
   const [rows] = await pool.query(
-    `SELECT id, name, email, role, phone, mobile, state, city, pincode, experience, about, skills, work_type, profile_completed, password_hash AS passwordHash, is_active AS isActive,
+    `SELECT id, name, email, role, phone, mobile, state, city, country, pincode, experience, about, skills, work_type, profile_completed, password_hash AS passwordHash, is_active AS isActive,
             service_category, preferred_language AS preferredLanguage, created_at AS createdAt
      FROM users
      WHERE email = ?
@@ -86,7 +86,7 @@ export async function findUserByEmail(email) {
 
 export async function findUserWithPasswordById(id) {
   const [rows] = await pool.query(
-    `SELECT id, name, email, role, phone, mobile, state, city, pincode, experience, about, skills, work_type, profile_completed, password_hash AS passwordHash, is_active AS isActive,
+    `SELECT id, name, email, role, phone, mobile, state, city, country, pincode, experience, about, skills, work_type, profile_completed, password_hash AS passwordHash, is_active AS isActive,
             service_category, preferred_language AS preferredLanguage, created_at AS createdAt
      FROM users
      WHERE id = ?
@@ -98,7 +98,7 @@ export async function findUserWithPasswordById(id) {
 
 export async function findUserById(id) {
   const [rows] = await pool.query(
-    `SELECT id, name, email, role, phone, mobile, state, city, pincode, experience, about, skills, work_type, service_category, preferred_language AS preferredLanguage, profile_completed, is_active AS isActive, created_at AS createdAt
+    `SELECT id, name, email, role, phone, mobile, state, city, country, pincode, experience, about, skills, work_type, service_category, preferred_language AS preferredLanguage, profile_completed, is_active AS isActive, created_at AS createdAt
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -109,7 +109,7 @@ export async function findUserById(id) {
 
 export async function findUserByMobile(mobile) {
   const [rows] = await pool.query(
-    `SELECT id, name, email, role, mobile, phone, state, city, pincode, experience, about, skills, work_type, profile_completed, password_hash AS passwordHash, is_active AS isActive,
+    `SELECT id, name, email, role, mobile, phone, state, city, country, pincode, experience, about, skills, work_type, profile_completed, password_hash AS passwordHash, is_active AS isActive,
             service_category, preferred_language AS preferredLanguage, created_at AS createdAt
      FROM users
      WHERE mobile = ?
@@ -119,11 +119,11 @@ export async function findUserByMobile(mobile) {
   return rows[0] || null;
 }
 
-export async function createUser({ name, email, passwordHash, role, mobile, workType, serviceCategory, preferredLanguage = "en" }) {
+export async function createUser({ name, email, passwordHash, role, mobile, workType, serviceCategory, preferredLanguage = "en", country = null, state = null, city = null, pincode = null }) {
   const [result] = await pool.query(
-    `INSERT INTO users (name, email, password_hash, role, mobile, work_type, service_category, preferred_language)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [name, email, passwordHash, role, mobile, workType || null, serviceCategory || null, preferredLanguage || "en"]
+    `INSERT INTO users (name, email, password_hash, role, mobile, work_type, service_category, preferred_language, country, state, city, pincode)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [name, email, passwordHash, role, mobile, workType || null, serviceCategory || null, preferredLanguage || "en", country || null, state || null, city || null, pincode || null]
   );
   return result.insertId;
 }
@@ -292,7 +292,7 @@ export async function updateUserProfileById(id, payload) {
   const updates = [];
   const values = [];
 
-  const { name, phone, mobile, passwordHash, state, city, pincode, experience, about, skills, workType, preferredLanguage, profileCompleted } = payload || {};
+  const { name, phone, mobile, passwordHash, country, state, city, pincode, experience, about, skills, workType, preferredLanguage, profileCompleted } = payload || {};
 
   if (typeof name === "string") {
     updates.push("name = ?");
@@ -307,6 +307,11 @@ export async function updateUserProfileById(id, payload) {
   if (payload && Object.prototype.hasOwnProperty.call(payload, "mobile")) {
     updates.push("mobile = ?");
     values.push(mobile || null);
+  }
+
+  if (country !== undefined) {
+    updates.push("country = ?");
+    values.push(country || null);
   }
 
   if (state !== undefined) {
