@@ -9,6 +9,13 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    if (config.headers) {
+      delete config.headers['Content-Type'];
+      delete config.headers['content-type'];
+    }
+  }
+
   const auth = localStorage.getItem('verbena_auth');
   if (auth) {
     const { token } = JSON.parse(auth);
