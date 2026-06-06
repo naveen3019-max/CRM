@@ -4,6 +4,7 @@ import { env } from "../config/env.js";
 import { isCloudinaryConfigured } from "../config/cloudinary.js";
 import { resolveUploadedFileUrl } from "../utils/upload.js";
 import * as companyService from "../services/company.service.js";
+import { getCompanyDocumentData } from "../repositories/company.repository.js";
 
 export const register = asyncHandler(async (req, res) => {
   const result = await companyService.registerCompany(req.body);
@@ -30,34 +31,39 @@ export const uploadDoc = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "Document type (docType) is required" });
   }
 
-  if (env.nodeEnv === "production" && !isCloudinaryConfigured) {
-    throw new ApiError(503, "Document storage is not configured.");
-  }
-
-  const fileUrl = resolveUploadedFileUrl(req.file);
-  // multer-storage-cloudinary sets public_id directly on req.file
-  // disk storage uses req.file.filename
-  const publicId = req.file?.public_id || req.file?.filename || null;
-
-  await companyService.saveDocument(req.user.id, req.user.email, docType, {
-    url: fileUrl,
-    publicId,
+  const result = await companyService.saveDocument(req.user.id, req.user.email, docType, {
+    buffer: req.file.buffer,
     mimeType: req.file?.mimetype || null,
     size: req.file?.size || null,
     fileName: req.file?.originalname || null
   });
+
+  const fileUrl = `/api/companies/documents/${result.docId}/download`;
 
   res.json({
     success: true,
     data: {
       url: fileUrl,
       fileUrl,
-      publicId,
+      publicId: null,
       mimeType: req.file?.mimetype || null,
       size: req.file?.size || null,
       fileName: req.file?.originalname || null
     }
   });
+});
+
+export const downloadDoc = asyncHandler(async (req, res) => {
+  const { docId } = req.params;
+  const doc = await getCompanyDocumentData(docId);
+
+  if (!doc || !doc.file_data) {
+    return res.status(404).json({ success: false, message: "Document not found" });
+  }
+
+  res.setHeader("Content-Type", doc.mime_type || "application/octet-stream");
+  res.setHeader("Content-Disposition", `inline; filename="${doc.file_name || 'document'}"`);
+  res.send(doc.file_data);
 });
 
 

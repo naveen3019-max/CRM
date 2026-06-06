@@ -117,8 +117,8 @@ export async function saveDocument(userId, email, docType, fileData) {
   const company = await ensureCompanyProfile(userId, email);
   if (!company) throw new ApiError(404, "Company profile not found");
 
-  await companyRepo.saveCompanyDocument(company.id, docType, fileData);
-  return { success: true };
+  const docId = await companyRepo.saveCompanyDocument(company.id, docType, fileData);
+  return { success: true, docId };
 }
 
 export async function getCompanyStatus(userId, email) {

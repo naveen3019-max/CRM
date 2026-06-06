@@ -23,3 +23,6 @@ companyRouter.post("/upload-document", (req, res, next) => {
     next();
   });
 }, companyController.uploadDoc);
+
+// Download document route (can be authenticated depending on requirement, currently placing it here implies authenticated)
+companyRouter.get("/documents/:docId/download", companyController.downloadDoc);

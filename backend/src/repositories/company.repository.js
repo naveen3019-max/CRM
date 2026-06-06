@@ -76,6 +76,7 @@ async function ensureCompanyDocumentColumns() {
     ["public_id", "VARCHAR(255) NULL AFTER file_url"],
     ["mime_type", "VARCHAR(100) NULL AFTER public_id"],
     ["file_size", "INT NULL AFTER mime_type"],
+    ["file_data", "LONGBLOB NULL AFTER file_size"],
     ["updated_at", "TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP AFTER created_at"]
   ];
 
@@ -201,18 +202,26 @@ export async function saveCompanyDocument(companyId, docType, fileData) {
   const mimeType = fileData?.mimeType || null;
   const fileSize = fileData?.size || null;
   const fileName = fileData?.fileName || null;
+  const fileBuffer = fileData?.buffer || null;
 
   await pool.query(
-    `INSERT INTO company_documents (company_id, doc_type, file_url, public_id, mime_type, file_size, file_name)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO company_documents (company_id, doc_type, file_url, public_id, mime_type, file_size, file_name, file_data)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        file_url = VALUES(file_url),
        public_id = VALUES(public_id),
        mime_type = VALUES(mime_type),
        file_size = VALUES(file_size),
-       file_name = VALUES(file_name)`,
-    [companyId, docType, fileUrl, publicId, mimeType, fileSize, fileName]
+       file_name = VALUES(file_name),
+       file_data = VALUES(file_data)`,
+    [companyId, docType, fileUrl, publicId, mimeType, fileSize, fileName, fileBuffer]
   );
+
+  const [rows] = await pool.query(
+    "SELECT id FROM company_documents WHERE company_id = ? AND doc_type = ?",
+    [companyId, docType]
+  );
+  return rows[0]?.id;
 }
 
 export async function getCompanyDocuments(companyId) {
@@ -249,4 +258,12 @@ export async function updateCompanyStatus(id, status, reason = null) {
     "UPDATE companies SET status = ?, rejection_reason = ? WHERE id = ?",
     [status, reason, id]
   );
+}
+
+export async function getCompanyDocumentData(docId) {
+  const [rows] = await pool.query(
+    "SELECT file_data, mime_type, file_name FROM company_documents WHERE id = ?",
+    [docId]
+  );
+  return rows[0];
 }
