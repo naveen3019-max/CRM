@@ -38,6 +38,16 @@ function parsePositiveInteger(value, fallback) {
   return Math.floor(parsed);
 }
 
+function hasRailwayRuntimeHint() {
+  return Boolean(
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RAILWAY_PROJECT_ID ||
+    process.env.RAILWAY_SERVICE_ID ||
+    process.env.RAILWAY_STATIC_URL ||
+    process.env.RAILWAY_PRIVATE_DOMAIN
+  );
+}
+
 function parseDatabaseUrl(rawUrl) {
   if (!rawUrl || typeof rawUrl !== "string") {
     return null;
@@ -99,11 +109,18 @@ function redactDatabaseUrl(rawUrl) {
 }
 
 function findDatabaseUrlConfig() {
-  const candidates = [
-    { source: "DATABASE_URL", rawUrl: process.env.DATABASE_URL },
-    { source: "MYSQL_URL", rawUrl: process.env.MYSQL_URL },
-    { source: "MYSQL_PUBLIC_URL", rawUrl: process.env.MYSQL_PUBLIC_URL }
-  ];
+  const railwayRuntime = hasRailwayRuntimeHint();
+  const candidates = railwayRuntime
+    ? [
+        { source: "DATABASE_URL", rawUrl: process.env.DATABASE_URL },
+        { source: "MYSQL_URL", rawUrl: process.env.MYSQL_URL },
+        { source: "MYSQL_PUBLIC_URL", rawUrl: process.env.MYSQL_PUBLIC_URL }
+      ]
+    : [
+        { source: "DATABASE_URL", rawUrl: process.env.DATABASE_URL },
+        { source: "MYSQL_PUBLIC_URL", rawUrl: process.env.MYSQL_PUBLIC_URL },
+        { source: "MYSQL_URL", rawUrl: process.env.MYSQL_URL }
+      ];
 
   for (const candidate of candidates) {
     const parsed = parseDatabaseUrl(candidate.rawUrl);
@@ -149,17 +166,13 @@ const databaseConfigSource = shouldUseLocalDbFallback
   ? "LOCAL_DB_*"
   : databaseUrlConfig?.source || (hasAnyEnvValue(dbStarKeys) ? "DB_*" : "unset");
 const mysqlPublicUrlParsed = parseDatabaseUrl(process.env.MYSQL_PUBLIC_URL);
-const expectedRailwayPublicHost = "metro.proxy.rlwy.net";
-const expectedRailwayPublicPort = 22437;
 const resolvedDbHostCandidate = parsedDatabaseUrl?.host || process.env.DB_HOST || "";
 const resolvedDbPortCandidate = Number(parsedDatabaseUrl?.port || process.env.DB_PORT || 3306);
-const isRailwayEndpoint = Boolean(
-  resolvedDbHostCandidate?.endsWith(".proxy.rlwy.net") || resolvedDbHostCandidate?.includes("railway")
-);
-const isExpectedRailwayPublicHost = resolvedDbHostCandidate === expectedRailwayPublicHost;
-const isExpectedRailwayPublicPort = resolvedDbPortCandidate === expectedRailwayPublicPort;
+const railwayRuntimeHint = hasRailwayRuntimeHint();
 const staleRailwayEndpointDetected = Boolean(
-  isRailwayEndpoint && (!isExpectedRailwayPublicHost || !isExpectedRailwayPublicPort)
+  databaseUrlConfig?.source === "MYSQL_URL" &&
+  !railwayRuntimeHint &&
+  resolvedDbHostCandidate === "mysql.railway.internal"
 );
 
 export const env = {
@@ -194,6 +207,7 @@ export const env = {
   mysqlPublicUrlDetected: Boolean(process.env.MYSQL_PUBLIC_URL),
   mysqlUrlDetected: Boolean(process.env.MYSQL_URL),
   databaseUrlDetected: Boolean(process.env.DATABASE_URL),
+  railwayRuntimeHint,
   mysqlPublicUrlParsed: Boolean(mysqlPublicUrlParsed),
   mysqlPublicUrlHost: mysqlPublicUrlParsed?.host || "",
   mysqlPublicUrlPort: mysqlPublicUrlParsed?.port || null,
@@ -202,8 +216,6 @@ export const env = {
     MYSQL_URL: redactDatabaseUrl(process.env.MYSQL_URL),
     DATABASE_URL: redactDatabaseUrl(process.env.DATABASE_URL)
   },
-  isExpectedRailwayPublicHost,
-  isExpectedRailwayPublicPort,
   usesStaleRailwayEndpoint: staleRailwayEndpointDetected,
   allowStartWithoutDb: parseBoolean(process.env.ALLOW_START_WITHOUT_DB, false),
   uploadDir: resolvedUploadDir,
@@ -259,10 +271,7 @@ export function getDatabaseStartupDiagnostics() {
     MYSQL_PUBLIC_URL_parsed: env.mysqlPublicUrlParsed,
     MYSQL_PUBLIC_URL_host: env.mysqlPublicUrlHost || null,
     MYSQL_PUBLIC_URL_port: env.mysqlPublicUrlPort,
-    expectedRailwayPublicHost,
-    expectedRailwayPublicPort,
-    usingExpectedRailwayPublicHost: env.isExpectedRailwayPublicHost,
-    usingExpectedRailwayPublicPort: env.isExpectedRailwayPublicPort,
+    railwayRuntimeHint: env.railwayRuntimeHint,
     staleRailwayEndpointDetected: env.usesStaleRailwayEndpoint
   };
 }
