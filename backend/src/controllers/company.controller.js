@@ -30,14 +30,18 @@ export const uploadDoc = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "Document type (docType) is required" });
   }
 
-  if (env.nodeEnv === "production" && !isCloudinaryConfigured()) {
+  if (env.nodeEnv === "production" && !isCloudinaryConfigured) {
     throw new ApiError(503, "Document storage is not configured.");
   }
 
   const fileUrl = resolveUploadedFileUrl(req.file);
+  // multer-storage-cloudinary sets public_id directly on req.file
+  // disk storage uses req.file.filename
+  const publicId = req.file?.public_id || req.file?.filename || null;
+
   await companyService.saveDocument(req.user.id, req.user.email, docType, {
     url: fileUrl,
-    publicId: req.file?.filename || null,
+    publicId,
     mimeType: req.file?.mimetype || null,
     size: req.file?.size || null,
     fileName: req.file?.originalname || null
@@ -48,13 +52,14 @@ export const uploadDoc = asyncHandler(async (req, res) => {
     data: {
       url: fileUrl,
       fileUrl,
-      publicId: req.file?.filename || null,
+      publicId,
       mimeType: req.file?.mimetype || null,
       size: req.file?.size || null,
       fileName: req.file?.originalname || null
     }
   });
 });
+
 
 export const getStatus = asyncHandler(async (req, res) => {
   const result = await companyService.getCompanyStatus(req.user.id, req.user.email);
