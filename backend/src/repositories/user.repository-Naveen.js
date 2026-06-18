@@ -9,13 +9,13 @@ let _lastSeenAvailable = false;
 async function ensureServiceCategoryColumnExists() {
   if (_serviceCategoryChecked) return;
   try {
-    const [rows] = await pool.query(
-      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'service_category'"
+    const { rows } = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'service_category'"
     );
     const cnt = rows && rows[0] && rows[0].cnt ? Number(rows[0].cnt) : 0;
     if (cnt === 0) {
       try {
-        await pool.query("ALTER TABLE users ADD COLUMN service_category VARCHAR(255) NULL AFTER work_type");
+        await pool.query("ALTER TABLE users ADD COLUMN service_category VARCHAR(255) NULL");
         console.log('[DB] Added missing column `service_category` to users table');
       } catch (err) {
         console.warn('[DB] Failed to add service_category column:', err && err.message);
@@ -30,13 +30,13 @@ async function ensureServiceCategoryColumnExists() {
 async function ensureIsOnlineColumnExists() {
   if (_isOnlineChecked) return;
   try {
-    const [rows] = await pool.query(
-      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'is_online'"
+    const { rows } = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'is_online'"
     );
     const cnt = rows && rows[0] && rows[0].cnt ? Number(rows[0].cnt) : 0;
     if (cnt === 0) {
       try {
-        await pool.query("ALTER TABLE users ADD COLUMN is_online TINYINT(1) NOT NULL DEFAULT 0 AFTER skills");
+        await pool.query("ALTER TABLE users ADD COLUMN is_online BOOLEAN NOT NULL DEFAULT false");
         console.log('[DB] Added missing column `is_online` to users table');
       } catch (err) {
         console.warn('[DB] Failed to add is_online column:', err && err.message);
@@ -51,13 +51,13 @@ async function ensureIsOnlineColumnExists() {
 async function ensureLastSeenColumnExists() {
   if (_lastSeenChecked) return;
   try {
-    const [rows] = await pool.query(
-      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'last_seen'"
+    const { rows } = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'last_seen'"
     );
     const cnt = rows && rows[0] && rows[0].cnt ? Number(rows[0].cnt) : 0;
     if (cnt === 0) {
       try {
-        await pool.query("ALTER TABLE users ADD COLUMN last_seen TIMESTAMP NULL DEFAULT NULL AFTER is_online");
+        await pool.query("ALTER TABLE users ADD COLUMN last_seen TIMESTAMP NULL DEFAULT NULL");
         console.log('[DB] Added missing column `last_seen` to users table');
         _lastSeenAvailable = true;
       } catch (err) {
@@ -73,11 +73,11 @@ async function ensureLastSeenColumnExists() {
 }
 
 export async function findUserByEmail(email) {
-  const [rows] = await pool.query(
-    `SELECT id, name, email, role, phone, mobile, state, city, pincode, experience, about, skills, work_type, profile_completed, password_hash AS passwordHash, is_active AS isActive,
-            service_category, preferred_language AS preferredLanguage, created_at AS createdAt
+  const { rows } = await pool.query(
+    `SELECT id, name, email, role, phone, mobile, state, city, pincode, experience, about, skills, work_type, profile_completed, password_hash AS "passwordHash", is_active AS "isActive",
+            service_category, preferred_language AS "preferredLanguage", created_at AS "createdAt"
      FROM users
-     WHERE email = ?
+     WHERE email = $1
      LIMIT 1`,
     [email]
   );
@@ -85,11 +85,11 @@ export async function findUserByEmail(email) {
 }
 
 export async function findUserWithPasswordById(id) {
-  const [rows] = await pool.query(
-    `SELECT id, name, email, role, phone, mobile, state, city, pincode, experience, about, skills, work_type, profile_completed, password_hash AS passwordHash, is_active AS isActive,
-            service_category, preferred_language AS preferredLanguage, created_at AS createdAt
+  const { rows } = await pool.query(
+    `SELECT id, name, email, role, phone, mobile, state, city, pincode, experience, about, skills, work_type, profile_completed, password_hash AS "passwordHash", is_active AS "isActive",
+            service_category, preferred_language AS "preferredLanguage", created_at AS "createdAt"
      FROM users
-     WHERE id = ?
+     WHERE id = $1
      LIMIT 1`,
     [id]
   );
@@ -97,10 +97,10 @@ export async function findUserWithPasswordById(id) {
 }
 
 export async function findUserById(id) {
-  const [rows] = await pool.query(
-    `SELECT id, name, email, role, phone, mobile, state, city, pincode, experience, about, skills, work_type, service_category, preferred_language AS preferredLanguage, profile_completed, is_active AS isActive, created_at AS createdAt
+  const { rows } = await pool.query(
+    `SELECT id, name, email, role, phone, mobile, state, city, pincode, experience, about, skills, work_type, service_category, preferred_language AS "preferredLanguage", profile_completed, is_active AS "isActive", created_at AS "createdAt"
      FROM users
-     WHERE id = ?
+     WHERE id = $1
      LIMIT 1`,
     [id]
   );
@@ -108,11 +108,11 @@ export async function findUserById(id) {
 }
 
 export async function findUserByMobile(mobile) {
-  const [rows] = await pool.query(
-    `SELECT id, name, email, role, mobile, phone, state, city, pincode, experience, about, skills, work_type, profile_completed, password_hash AS passwordHash, is_active AS isActive,
-            service_category, preferred_language AS preferredLanguage, created_at AS createdAt
+  const { rows } = await pool.query(
+    `SELECT id, name, email, role, mobile, phone, state, city, pincode, experience, about, skills, work_type, profile_completed, password_hash AS "passwordHash", is_active AS "isActive",
+            service_category, preferred_language AS "preferredLanguage", created_at AS "createdAt"
      FROM users
-     WHERE mobile = ?
+     WHERE mobile = $1
      LIMIT 1`,
     [mobile]
   );
@@ -120,19 +120,19 @@ export async function findUserByMobile(mobile) {
 }
 
 export async function createUser({ name, email, passwordHash, role, mobile, workType, serviceCategory, preferredLanguage = "en" }) {
-  const [result] = await pool.query(
+  const { rows } = await pool.query(
     `INSERT INTO users (name, email, password_hash, role, mobile, work_type, service_category, preferred_language)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
     [name, email, passwordHash, role, mobile, workType || null, serviceCategory || null, preferredLanguage || "en"]
   );
-  return result.insertId;
+  return rows[0].id;
 }
 
 export async function listAllUsers() {
   await ensureServiceCategoryColumnExists();
-  const [rows] = await pool.query(
-    `SELECT id, name, email, role, phone, mobile, is_active AS isActive, created_at AS createdAt,
-            COALESCE(service_category, work_type) AS serviceCategory, city, experience
+  const { rows } = await pool.query(
+    `SELECT id, name, email, role, phone, mobile, is_active AS "isActive", created_at AS "createdAt",
+            COALESCE(service_category, work_type) AS "serviceCategory", city, experience
      FROM users
      ORDER BY created_at DESC`
   );
@@ -140,13 +140,13 @@ export async function listAllUsers() {
 }
 
 export async function updateUserRoleById(id, role) {
-  const [result] = await pool.query(
+  const result = await pool.query(
     `UPDATE users
-     SET role = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
+     SET role = $1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2`,
     [role, id]
   );
-  return result.affectedRows > 0;
+  return result.rowCount > 0;
 }
 
 export async function listUsersByRoles(roles = [], excludedUserId = null) {
@@ -155,21 +155,21 @@ export async function listUsersByRoles(roles = [], excludedUserId = null) {
   }
 
   const expandedRoles = expandChatRoles(roles);
-  const placeholders = expandedRoles.map(() => "?").join(", ");
+  const placeholders = expandedRoles.map((_, i) => `$${i + 1}`).join(", ");
   const values = [...expandedRoles];
   let query =
-    `SELECT id, name, email, role, phone, mobile, is_active AS isActive, created_at AS createdAt
+    `SELECT id, name, email, role, phone, mobile, is_active AS "isActive", created_at AS "createdAt"
      FROM users
-     WHERE role IN (${placeholders}) AND is_active = 1`;
+     WHERE role IN (${placeholders}) AND is_active = true`;
 
   if (excludedUserId) {
-    query += " AND id <> ?";
     values.push(excludedUserId);
+    query += ` AND id <> $${values.length}`;
   }
 
   query += " ORDER BY name ASC";
 
-  const [rows] = await pool.query(query, values);
+  const { rows } = await pool.query(query, values);
   return rows;
 }
 
@@ -184,30 +184,29 @@ export async function searchUsersByRoles({ roles = [], excludedUserId = null, lo
   await ensureLastSeenColumnExists();
 
   const expandedRoles = expandChatRoles(roles);
-  const queryParts = ["u.role IN (" + expandedRoles.map(() => "?").join(", ") + ")"];
+  const queryParts = ["u.role IN (" + expandedRoles.map((_, i) => `$${i + 1}`).join(", ") + ")"];
   const values = [...expandedRoles];
 
   if (excludedUserId) {
-    queryParts.push("u.id <> ?");
     values.push(excludedUserId);
+    queryParts.push(`u.id <> $${values.length}`);
   }
 
   // Handle explicit city filter
   if (city) {
-    queryParts.push("LOWER(COALESCE(u.city, '')) LIKE ?");
     values.push(`%${city.toLowerCase()}%`);
+    queryParts.push(`LOWER(COALESCE(u.city, '')) LIKE $${values.length}`);
   }
 
   // Handle explicit pincode filter
   if (pincode) {
-    queryParts.push("LOWER(COALESCE(u.pincode, '')) LIKE ?");
     values.push(`%${pincode.toLowerCase()}%`);
+    queryParts.push(`LOWER(COALESCE(u.pincode, '')) LIKE $${values.length}`);
   }
 
   // Handle explicit experience filter (handles ranges like "1+", "3+", etc.)
   if (experience) {
     const expParts = [];
-    const expValues = [];
     
     if (experience.includes("fresher") || experience === "0") {
       expParts.push("u.experience = 0");
@@ -221,34 +220,33 @@ export async function searchUsersByRoles({ roles = [], excludedUserId = null, lo
       // Try to parse as a number
       const num = parseInt(experience, 10);
       if (!isNaN(num)) {
-        expParts.push("u.experience >= ?");
-        expValues.push(num);
+        values.push(num);
+        expParts.push(`u.experience >= $${values.length}`);
       }
     }
     
     if (expParts.length > 0) {
       queryParts.push("(" + expParts.join(" OR ") + ")");
-      values.push(...expValues);
     }
   }
 
   // Handle explicit service_category filter
   if (service_category) {
-    queryParts.push("(LOWER(COALESCE(u.service_category, '')) LIKE ? OR LOWER(COALESCE(u.work_type, '')) LIKE ?)");
     const catTerm = `%${service_category.toLowerCase()}%`;
     values.push(catTerm, catTerm);
+    queryParts.push(`(LOWER(COALESCE(u.service_category, '')) LIKE $${values.length - 1} OR LOWER(COALESCE(u.work_type, '')) LIKE $${values.length})`);
   }
 
   if (location) {
-    queryParts.push("(LOWER(COALESCE(u.state, '')) LIKE ? OR LOWER(COALESCE(u.city, '')) LIKE ? OR LOWER(COALESCE(u.pincode, '')) LIKE ? OR LOWER(COALESCE(u.service_category, '')) LIKE ? OR LOWER(COALESCE(u.work_type, '')) LIKE ?)");
     const locationTerm = `%${location.toLowerCase()}%`;
     values.push(locationTerm, locationTerm, locationTerm, locationTerm, locationTerm);
+    queryParts.push(`(LOWER(COALESCE(u.state, '')) LIKE $${values.length - 4} OR LOWER(COALESCE(u.city, '')) LIKE $${values.length - 3} OR LOWER(COALESCE(u.pincode, '')) LIKE $${values.length - 2} OR LOWER(COALESCE(u.service_category, '')) LIKE $${values.length - 1} OR LOWER(COALESCE(u.work_type, '')) LIKE $${values.length})`);
   }
 
   if (term && !location) {
-    queryParts.push("(LOWER(u.name) LIKE ? OR LOWER(COALESCE(u.email, '')) LIKE ? OR LOWER(COALESCE(u.state, '')) LIKE ? OR LOWER(COALESCE(u.city, '')) LIKE ? OR LOWER(COALESCE(u.pincode, '')) LIKE ? OR LOWER(COALESCE(u.service_category, '')) LIKE ? OR LOWER(COALESCE(u.work_type, '')) LIKE ? OR LOWER(COALESCE(u.skills, '')) LIKE ? OR LOWER(COALESCE(u.about, '')) LIKE ?)");
     const termValue = `%${term.toLowerCase()}%`;
     values.push(termValue, termValue, termValue, termValue, termValue, termValue, termValue, termValue, termValue);
+    queryParts.push(`(LOWER(u.name) LIKE $${values.length - 8} OR LOWER(COALESCE(u.email, '')) LIKE $${values.length - 7} OR LOWER(COALESCE(u.state, '')) LIKE $${values.length - 6} OR LOWER(COALESCE(u.city, '')) LIKE $${values.length - 5} OR LOWER(COALESCE(u.pincode, '')) LIKE $${values.length - 4} OR LOWER(COALESCE(u.service_category, '')) LIKE $${values.length - 3} OR LOWER(COALESCE(u.work_type, '')) LIKE $${values.length - 2} OR LOWER(COALESCE(u.skills, '')) LIKE $${values.length - 1} OR LOWER(COALESCE(u.about, '')) LIKE $${values.length})`);
   }
 
   values.push(Number(limit) || 10);
@@ -259,28 +257,28 @@ export async function searchUsersByRoles({ roles = [], excludedUserId = null, lo
     "u.name",
     "u.role",
     "TRIM(CONCAT_WS(', ', NULLIF(u.service_category, ''), NULLIF(u.city, ''), NULLIF(u.state, ''), NULLIF(u.pincode, ''))) AS location",
-    "COALESCE(u.service_category, u.work_type) AS serviceCategory",
+    "COALESCE(u.service_category, u.work_type) AS \"serviceCategory\"",
     "u.state",
     "u.city",
     "u.pincode",
     "u.experience",
     "u.about",
     "u.skills",
-    "COALESCE(u.is_online, 0) AS isOnline"
+    "COALESCE(u.is_online, false) AS \"isOnline\""
   ];
 
   if (_lastSeenAvailable) {
-    selectFields.push("u.last_seen AS lastSeen");
+    selectFields.push("u.last_seen AS \"lastSeen\"");
   }
 
-  const orderExpr = _lastSeenAvailable ? "COALESCE(u.is_online, 0) DESC, u.last_seen DESC, u.name ASC" : "COALESCE(u.is_online, 0) DESC, u.created_at DESC, u.name ASC";
+  const orderExpr = _lastSeenAvailable ? "COALESCE(CAST(u.is_online AS integer), 0) DESC, u.last_seen DESC, u.name ASC" : "COALESCE(CAST(u.is_online AS integer), 0) DESC, u.created_at DESC, u.name ASC";
 
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT ${selectFields.join(",\n       ")}
      FROM users u
      WHERE ${queryParts.join(" AND ")}
      ORDER BY ${orderExpr}
-     LIMIT ?`,
+     LIMIT $${values.length}`,
     values
   );
 
@@ -295,73 +293,73 @@ export async function updateUserProfileById(id, payload) {
   const { name, phone, mobile, passwordHash, state, city, pincode, experience, about, skills, workType, preferredLanguage, profileCompleted } = payload || {};
 
   if (typeof name === "string") {
-    updates.push("name = ?");
     values.push(name);
+    updates.push(`name = $${values.length}`);
   }
 
   if (phone !== undefined) {
-    updates.push("phone = ?");
     values.push(phone || null);
+    updates.push(`phone = $${values.length}`);
   }
 
   if (payload && Object.prototype.hasOwnProperty.call(payload, "mobile")) {
-    updates.push("mobile = ?");
     values.push(mobile || null);
+    updates.push(`mobile = $${values.length}`);
   }
 
   if (state !== undefined) {
-    updates.push("state = ?");
     values.push(state || null);
+    updates.push(`state = $${values.length}`);
   }
 
   if (city !== undefined) {
-    updates.push("city = ?");
     values.push(city || null);
+    updates.push(`city = $${values.length}`);
   }
 
   if (pincode !== undefined) {
-    updates.push("pincode = ?");
     values.push(pincode || null);
+    updates.push(`pincode = $${values.length}`);
   }
 
   if (experience !== undefined) {
-    updates.push("experience = ?");
     values.push(experience || null);
+    updates.push(`experience = $${values.length}`);
   }
 
   if (about !== undefined) {
-    updates.push("about = ?");
     values.push(about || null);
+    updates.push(`about = $${values.length}`);
   }
 
   if (skills !== undefined) {
-    updates.push("skills = ?");
     values.push(skills || null);
+    updates.push(`skills = $${values.length}`);
   }
 
   if (workType !== undefined) {
-    updates.push("work_type = ?");
     values.push(workType || null);
+    updates.push(`work_type = $${values.length}`);
   }
   // Keep service_category in sync when workType is provided
   if (workType !== undefined) {
-    updates.push("service_category = ?");
     values.push(workType || null);
+    updates.push(`service_category = $${values.length}`);
   }
 
   if (preferredLanguage !== undefined) {
-    updates.push("preferred_language = ?");
     values.push(preferredLanguage || "en");
+    updates.push(`preferred_language = $${values.length}`);
   }
 
   if (profileCompleted !== undefined) {
-    updates.push("profile_completed = ?");
     values.push(profileCompleted ? 1 : 0);
+    updates.push(`profile_completed = $${values.length}`);
   }
 
   if (passwordHash) {
-    updates.push("password_hash = ?");
     values.push(passwordHash);
+    updates.push(`password_hash = $${values.length}`);
   }
 
   if (!updates.length) {
@@ -369,31 +367,31 @@ export async function updateUserProfileById(id, payload) {
   }
 
   values.push(id);
-  const [result] = await pool.query(
+  const result = await pool.query(
     `UPDATE users
      SET ${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
+     WHERE id = $${values.length}`,
     values
   );
 
-  return result.affectedRows > 0;
+  return result.rowCount > 0;
 }
 
 export async function updateVerificationToken(id, verificationToken, expiresAt) {
-  const [result] = await pool.query(
+  const result = await pool.query(
     `UPDATE users
-     SET verification_token = ?, verification_token_expires_at = ?, verification_attempts = 0, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
+     SET verification_token = $1, verification_token_expires_at = $2, verification_attempts = 0, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $3`,
     [verificationToken, expiresAt, id]
   );
-  return result.affectedRows > 0;
+  return result.rowCount > 0;
 }
 
 export async function findUserByVerificationToken(token) {
-  const [rows] = await pool.query(
-    `SELECT id, name, email, role, verification_token_expires_at AS expiresAt, email_verified AS emailVerified
+  const { rows } = await pool.query(
+    `SELECT id, name, email, role, verification_token_expires_at AS "expiresAt", email_verified AS "emailVerified"
      FROM users
-     WHERE verification_token = ? AND verification_token_expires_at > NOW()
+     WHERE verification_token = $1 AND verification_token_expires_at > NOW()
      LIMIT 1`,
     [token]
   );
@@ -401,11 +399,11 @@ export async function findUserByVerificationToken(token) {
 }
 
 export async function markEmailAsVerified(id) {
-  const [result] = await pool.query(
+  const result = await pool.query(
     `UPDATE users
-     SET email_verified = 1, verification_token = NULL, verification_token_expires_at = NULL, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
+     SET email_verified = true, verification_token = NULL, verification_token_expires_at = NULL, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1`,
     [id]
   );
-  return result.affectedRows > 0;
+  return result.rowCount > 0;
 }

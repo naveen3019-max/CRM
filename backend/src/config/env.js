@@ -55,14 +55,14 @@ function parseDatabaseUrl(rawUrl) {
 
   try {
     const parsed = new URL(rawUrl);
-    if (!parsed.protocol.startsWith("mysql")) {
+    if (!parsed.protocol.startsWith("postgres") && !parsed.protocol.startsWith("postgresql")) {
       return null;
     }
 
     return {
       host: parsed.hostname,
-      port: Number(parsed.port || 3306),
-      user: decodeURIComponent(parsed.username || "root"),
+      port: Number(parsed.port || 5432),
+      user: decodeURIComponent(parsed.username || "postgres"),
       password: decodeURIComponent(parsed.password || ""),
       database: parsed.pathname ? parsed.pathname.replace(/^\//, "") : ""
     };

@@ -1,21 +1,19 @@
 import { pool } from "../config/db.js";
 
 export async function createNotificationRecord({ userId, message, payloadJson }) {
-  const [result] = await pool.query(
+  const { rows } = await pool.query(
     `INSERT INTO notifications (user_id, message, payload_json)
-     VALUES (?, ?, ?)`,
+     VALUES ($1, $2, $3) RETURNING id`,
     [userId, message, payloadJson ? JSON.stringify(payloadJson) : null]
   );
-  return result.insertId;
+  return rows[0].id;
 }
 
 export async function createNotificationForAllAdmins(message, payloadJson) {
-  // Get all admin users
-  const [admins] = await pool.query(
+  const { rows: admins } = await pool.query(
     `SELECT id FROM users WHERE role = 'admin'`
   );
   
-  // Create a notification for each admin
   const notificationIds = [];
   for (const admin of admins) {
     const id = await createNotificationRecord({
@@ -30,13 +28,13 @@ export async function createNotificationForAllAdmins(message, payloadJson) {
 }
 
 export async function listNotificationsForUser(userId, limit = 50) {
-  const [rows] = await pool.query(
-    `SELECT id, user_id AS userId, message, payload_json AS payloadJson,
-            read_status AS readStatus, created_at AS createdAt
+  const { rows } = await pool.query(
+    `SELECT id, user_id AS "userId", message, payload_json AS "payloadJson",
+            read_status AS "readStatus", created_at AS "createdAt"
      FROM notifications
-     WHERE user_id = ?
+     WHERE user_id = $1
      ORDER BY created_at DESC
-     LIMIT ?`,
+     LIMIT $2`,
     [userId, limit]
   );
 
@@ -62,11 +60,11 @@ export async function listNotificationsForUser(userId, limit = 50) {
 }
 
 export async function markNotificationReadById(notificationId, userId) {
-  const [result] = await pool.query(
+  const result = await pool.query(
     `UPDATE notifications
-     SET read_status = 1
-     WHERE id = ? AND user_id = ?`,
+     SET read_status = true
+     WHERE id = $1 AND user_id = $2`,
     [notificationId, userId]
   );
-  return result.affectedRows > 0;
+  return result.rowCount > 0;
 }

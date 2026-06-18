@@ -11,23 +11,23 @@ async function ensureCompanyOnboardingColumns() {
   }
 
   const columnsToEnsure = [
-    ["user_id", "BIGINT UNSIGNED NULL AFTER id"],
-    ["service_type", "VARCHAR(255) AFTER name"],
-    ["description", "TEXT AFTER service_type"],
-    ["years_of_experience", "INT AFTER description"],
-    ["city", "VARCHAR(100) AFTER address"],
-    ["state", "VARCHAR(100) AFTER city"],
-    ["pincode", "VARCHAR(10) AFTER state"],
-    ["alternate_phone", "VARCHAR(20) AFTER phone"],
-    ["business_email", "VARCHAR(255) AFTER alternate_phone"],
-    ["website", "VARCHAR(255) AFTER business_email"]
+    ["user_id", "BIGINT NULL"],
+    ["service_type", "VARCHAR(255)"],
+    ["description", "TEXT"],
+    ["years_of_experience", "INT"],
+    ["city", "VARCHAR(100)"],
+    ["state", "VARCHAR(100)"],
+    ["pincode", "VARCHAR(10)"],
+    ["alternate_phone", "VARCHAR(20)"],
+    ["business_email", "VARCHAR(255)"],
+    ["website", "VARCHAR(255)"]
   ];
 
   try {
-    const [rows] = await pool.query(
-      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'companies'"
+    const { rows } = await pool.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = 'companies'"
     );
-    const existingColumns = new Set((rows || []).map((row) => row.COLUMN_NAME));
+    const existingColumns = new Set((rows || []).map((row) => row.column_name));
 
     for (const [columnName, definition] of columnsToEnsure) {
       if (existingColumns.has(columnName)) {
@@ -37,7 +37,7 @@ async function ensureCompanyOnboardingColumns() {
       try {
         await pool.query(`ALTER TABLE companies ADD COLUMN ${columnName} ${definition}`);
       } catch (err) {
-        if (err?.code !== "ER_DUP_FIELDNAME") {
+        if (err?.code !== "42701") {
           throw err;
         }
       }
@@ -55,8 +55,8 @@ async function ensureCompanyUserIdColumnState() {
   }
 
   try {
-    const [rows] = await pool.query(
-      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'companies' AND COLUMN_NAME = 'user_id'"
+    const { rows } = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = 'companies' AND COLUMN_NAME = 'user_id'"
     );
     companyUserIdColumnExists = Number(rows?.[0]?.cnt || 0) > 0;
   } catch (err) {
@@ -73,18 +73,18 @@ async function ensureCompanyDocumentColumns() {
   }
 
   const columnsToEnsure = [
-    ["public_id", "VARCHAR(255) NULL AFTER file_url"],
-    ["mime_type", "VARCHAR(100) NULL AFTER public_id"],
-    ["file_size", "INT NULL AFTER mime_type"],
-    ["file_data", "LONGBLOB NULL AFTER file_size"],
-    ["updated_at", "TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP AFTER created_at"]
+    ["public_id", "VARCHAR(255) NULL"],
+    ["mime_type", "VARCHAR(100) NULL"],
+    ["file_size", "INT NULL"],
+    ["file_data", "BYTEA NULL"],
+    ["updated_at", "TIMESTAMP NULL DEFAULT NULL"]
   ];
 
   try {
-    const [rows] = await pool.query(
-      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'company_documents'"
+    const { rows } = await pool.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = 'company_documents'"
     );
-    const existingColumns = new Set((rows || []).map((row) => row.COLUMN_NAME));
+    const existingColumns = new Set((rows || []).map((row) => row.column_name));
 
     for (const [columnName, definition] of columnsToEnsure) {
       if (existingColumns.has(columnName)) {
@@ -94,7 +94,7 @@ async function ensureCompanyDocumentColumns() {
       try {
         await pool.query(`ALTER TABLE company_documents ADD COLUMN ${columnName} ${definition}`);
       } catch (err) {
-        if (err?.code !== "ER_DUP_FIELDNAME") {
+        if (err?.code !== "42701") {
           throw err;
         }
       }
@@ -107,20 +107,20 @@ async function ensureCompanyDocumentColumns() {
 }
 
 export async function createCompany(data) {
-  const [result] = await pool.query(
-    "INSERT INTO companies (name, email, password_hash) VALUES (?, ?, ?)",
+  const { rows } = await pool.query(
+    "INSERT INTO companies (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id",
     [data.name, data.email, data.passwordHash]
   );
-  return result.insertId;
+  return rows[0].id;
 }
 
 export async function findCompanyByEmail(email) {
-  const [rows] = await pool.query("SELECT * FROM companies WHERE email = ?", [email]);
+  const { rows } = await pool.query("SELECT * FROM companies WHERE email = $1", [email]);
   return rows[0];
 }
 
 export async function findCompanyById(id) {
-  const [rows] = await pool.query("SELECT * FROM companies WHERE id = ?", [id]);
+  const { rows } = await pool.query("SELECT * FROM companies WHERE id = $1", [id]);
   return rows[0];
 }
 
@@ -130,7 +130,7 @@ export async function findCompanyByUserId(userId) {
     return null;
   }
 
-  const [rows] = await pool.query("SELECT * FROM companies WHERE user_id = ?", [userId]);
+  const { rows } = await pool.query("SELECT * FROM companies WHERE user_id = $1", [userId]);
   return rows[0];
 }
 
@@ -142,8 +142,8 @@ export async function linkCompanyToUserId(companyId, userId) {
 
   await pool.query(
     `UPDATE companies
-     SET user_id = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
+     SET user_id = $1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2`,
     [userId, companyId]
   );
 }
@@ -153,19 +153,19 @@ export async function updateCompanyInfo(id, data) {
 
   await pool.query(
     `UPDATE companies SET 
-      service_type = ?, 
-      description = ?, 
-      years_of_experience = ?, 
-      address = ?, 
-      city = ?, 
-      state = ?, 
-      pincode = ?, 
-      phone = ?, 
-      alternate_phone = ?, 
-      business_email = ?, 
-      website = ?,
+      service_type = $1, 
+      description = $2, 
+      years_of_experience = $3, 
+      address = $4, 
+      city = $5, 
+      state = $6, 
+      pincode = $7, 
+      phone = $8, 
+      alternate_phone = $9, 
+      business_email = $10, 
+      website = $11,
       status = 'pending'
-    WHERE id = ?`,
+    WHERE id = $12`,
     [
       data.service_type, 
       data.description, 
@@ -186,12 +186,12 @@ export async function updateCompanyInfo(id, data) {
 export async function createCompanyProfile(data) {
   const hasUserIdColumn = await ensureCompanyUserIdColumnState();
   const query = hasUserIdColumn
-    ? "INSERT INTO companies (user_id, name, email) VALUES (?, ?, ?)"
-    : "INSERT INTO companies (name, email) VALUES (?, ?)";
+    ? "INSERT INTO companies (user_id, name, email) VALUES ($1, $2, $3) RETURNING id"
+    : "INSERT INTO companies (name, email) VALUES ($1, $2) RETURNING id";
   const values = hasUserIdColumn ? [data.userId, data.name, data.email] : [data.name, data.email];
 
-  const [result] = await pool.query(query, values);
-  return result.insertId;
+  const { rows } = await pool.query(query, values);
+  return rows[0].id;
 }
 
 export async function saveCompanyDocument(companyId, docType, fileData) {
@@ -206,19 +206,19 @@ export async function saveCompanyDocument(companyId, docType, fileData) {
 
   await pool.query(
     `INSERT INTO company_documents (company_id, doc_type, file_url, public_id, mime_type, file_size, file_name, file_data)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       file_url = VALUES(file_url),
-       public_id = VALUES(public_id),
-       mime_type = VALUES(mime_type),
-       file_size = VALUES(file_size),
-       file_name = VALUES(file_name),
-       file_data = VALUES(file_data)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     ON CONFLICT (company_id, doc_type) DO UPDATE SET
+       file_url = EXCLUDED.file_url,
+       public_id = EXCLUDED.public_id,
+       mime_type = EXCLUDED.mime_type,
+       file_size = EXCLUDED.file_size,
+       file_name = EXCLUDED.file_name,
+       file_data = EXCLUDED.file_data`,
     [companyId, docType, fileUrl, publicId, mimeType, fileSize, fileName, fileBuffer]
   );
 
-  const [rows] = await pool.query(
-    "SELECT id FROM company_documents WHERE company_id = ? AND doc_type = ?",
+  const { rows } = await pool.query(
+    "SELECT id FROM company_documents WHERE company_id = $1 AND doc_type = $2",
     [companyId, docType]
   );
   return rows[0]?.id;
@@ -227,10 +227,10 @@ export async function saveCompanyDocument(companyId, docType, fileData) {
 export async function getCompanyDocuments(companyId) {
   await ensureCompanyDocumentColumns();
 
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT
       id,
-      company_id AS company_id,
+      company_id AS "company_id",
       doc_type,
       file_url,
       file_url AS url,
@@ -241,7 +241,7 @@ export async function getCompanyDocuments(companyId) {
       created_at,
       updated_at
      FROM company_documents
-     WHERE company_id = ?
+     WHERE company_id = $1
      ORDER BY created_at DESC`,
     [companyId]
   );
@@ -249,20 +249,20 @@ export async function getCompanyDocuments(companyId) {
 }
 
 export async function getAllCompanies() {
-  const [rows] = await pool.query("SELECT id, user_id, name, email, industry, status, created_at FROM companies ORDER BY created_at DESC");
+  const { rows } = await pool.query("SELECT id, user_id, name, email, industry, status, created_at FROM companies ORDER BY created_at DESC");
   return rows;
 }
 
 export async function updateCompanyStatus(id, status, reason = null) {
   await pool.query(
-    "UPDATE companies SET status = ?, rejection_reason = ? WHERE id = ?",
+    "UPDATE companies SET status = $1, rejection_reason = $2 WHERE id = $3",
     [status, reason, id]
   );
 }
 
 export async function getCompanyDocumentData(docId) {
-  const [rows] = await pool.query(
-    "SELECT file_data, mime_type, file_name FROM company_documents WHERE id = ?",
+  const { rows } = await pool.query(
+    "SELECT file_data, mime_type, file_name FROM company_documents WHERE id = $1",
     [docId]
   );
   return rows[0];

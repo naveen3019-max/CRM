@@ -124,11 +124,19 @@ export default function ServiceRequestPage() {
         setError(t("serviceRequest.completeProblemFields", "Please complete all problem detail fields."));
         return false;
       }
+      if (form.problemDescription.trim().length < 10 || form.expectedSolution.trim().length < 10 || form.requirementDetails.trim().length < 10) {
+        setError("Please enter at least 10 characters for the description, solution, and requirement fields.");
+        return false;
+      }
     }
 
     if (step === 3) {
       if (!form.address.trim() || !form.city.trim() || !form.areaPincode.trim()) {
         setError(t("serviceRequest.completeLocationFields", "Please complete location fields."));
+        return false;
+      }
+      if (form.address.trim().length < 5 || form.city.trim().length < 2 || form.areaPincode.trim().length < 3) {
+        setError("Please provide a valid address (min 5 chars), city (min 2 chars), and pincode (min 3 chars).");
         return false;
       }
     }
@@ -271,7 +279,13 @@ export default function ServiceRequestPage() {
       const created = response.data?.data;
       setSuccessRequest(created);
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || t("serviceRequest.submitFailed", "Failed to submit service request."));
+      let errorMessage = requestError?.response?.data?.message || t("serviceRequest.submitFailed", "Failed to submit service request.");
+      const details = requestError?.response?.data?.details;
+      if (Array.isArray(details) && details.length > 0) {
+        const fieldErrors = details.map(err => `${err.path}: ${err.msg}`).join(', ');
+        errorMessage += ` (${fieldErrors})`;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

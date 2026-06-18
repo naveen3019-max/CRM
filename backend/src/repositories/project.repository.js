@@ -1,9 +1,9 @@
 import { pool } from "../config/db.js";
 
 export async function createProjectOrderRecord(payload) {
-  const [result] = await pool.query(
+  const { rows } = await pool.query(
     `INSERT INTO projects_orders (lead_id, customer_id, vendor_id, status, total_amount, start_date, end_date)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
     [
       payload.leadId || null,
       payload.customerId,
@@ -14,7 +14,7 @@ export async function createProjectOrderRecord(payload) {
       payload.endDate || null
     ]
   );
-  return result.insertId;
+  return rows[0].id;
 }
 
 export async function listProjectOrderRecords({ customerId, vendorId, status }) {
@@ -22,25 +22,25 @@ export async function listProjectOrderRecords({ customerId, vendorId, status }) 
   const values = [];
 
   if (customerId) {
-    conditions.push("p.customer_id = ?");
     values.push(customerId);
+    conditions.push(`p.customer_id = $${values.length}`);
   }
   if (vendorId) {
-    conditions.push("p.vendor_id = ?");
     values.push(vendorId);
+    conditions.push(`p.vendor_id = $${values.length}`);
   }
   if (status) {
-    conditions.push("p.status = ?");
     values.push(status);
+    conditions.push(`p.status = $${values.length}`);
   }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  const [rows] = await pool.query(
-    `SELECT p.id, p.lead_id AS leadId, p.customer_id AS customerId, p.vendor_id AS vendorId,
-            p.status, p.total_amount AS totalAmount, p.start_date AS startDate, p.end_date AS endDate,
-            p.created_at AS createdAt, p.updated_at AS updatedAt,
-            c.name AS customerName, v.name AS vendorName
+  const { rows } = await pool.query(
+    `SELECT p.id, p.lead_id AS "leadId", p.customer_id AS "customerId", p.vendor_id AS "vendorId",
+            p.status, p.total_amount AS "totalAmount", p.start_date AS "startDate", p.end_date AS "endDate",
+            p.created_at AS "createdAt", p.updated_at AS "updatedAt",
+            c.name AS "customerName", v.name AS "vendorName"
      FROM projects_orders p
      INNER JOIN users c ON c.id = p.customer_id
      LEFT JOIN users v ON v.id = p.vendor_id
@@ -57,8 +57,8 @@ export async function updateProjectOrderRecord(projectId, fields) {
 
   Object.entries(fields).forEach(([key, value]) => {
     if (value !== undefined) {
-      updates.push(`${key} = ?`);
       values.push(value);
+      updates.push(`${key} = $${values.length}`);
     }
   });
 
@@ -67,13 +67,14 @@ export async function updateProjectOrderRecord(projectId, fields) {
   }
 
   updates.push("updated_at = CURRENT_TIMESTAMP");
+  values.push(projectId);
 
-  const [result] = await pool.query(
+  const result = await pool.query(
     `UPDATE projects_orders
      SET ${updates.join(", ")}
-     WHERE id = ?`,
-    [...values, projectId]
+     WHERE id = $${values.length}`,
+    values
   );
 
-  return result.affectedRows > 0;
+  return result.rowCount > 0;
 }

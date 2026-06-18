@@ -1,4 +1,5 @@
-import mysql from "mysql2/promise";
+import pg from "pg";
+const { Pool } = pg;
 import {
   env,
   getDatabaseStartupDiagnostics,
@@ -17,18 +18,12 @@ const poolConfig = {
         rejectUnauthorized: env.dbSslRejectUnauthorized
       }
     : undefined,
-  waitForConnections: true,
-  connectionLimit: 15,
-  queueLimit: 0,
-  timezone: "Z",
-  connectTimeout: env.dbConnectTimeoutMs,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0
+  max: 15,
+  connectionTimeoutMillis: env.dbConnectTimeoutMs,
+  idleTimeoutMillis: 30000,
 };
 
 const rawDatabaseEnvDiagnostics = getRawDatabaseEnvDiagnostics();
-console.log("MYSQL_PUBLIC_URL:", rawDatabaseEnvDiagnostics.MYSQL_PUBLIC_URL);
-console.log("MYSQL_URL:", rawDatabaseEnvDiagnostics.MYSQL_URL);
 console.log("DATABASE_URL:", rawDatabaseEnvDiagnostics.DATABASE_URL);
 console.log("Resolved Database Config:", {
   host: env.dbHost,
@@ -36,19 +31,9 @@ console.log("Resolved Database Config:", {
   database: env.dbName,
   user: env.dbUser
 });
-console.log("[Database] Resolved configuration before mysql.createPool():", getDatabaseStartupDiagnostics());
+console.log("[Database] Resolved configuration before new Pool():", getDatabaseStartupDiagnostics());
 
-if (!env.isExpectedRailwayPublicHost || !env.isExpectedRailwayPublicPort || env.usesStaleRailwayEndpoint) {
-  console.warn("[Database] Railway endpoint check:", {
-    expectedHost: "metro.proxy.rlwy.net",
-    expectedPort: 22437,
-    actualHost: env.dbHost,
-    actualPort: env.dbPort,
-    staleRailwayEndpointDetected: env.usesStaleRailwayEndpoint
-  });
-}
-
-export const pool = mysql.createPool(poolConfig);
+export const pool = new Pool(poolConfig);
 
 const transientConnectionErrorCodes = new Set([
   "ECONNRESET",
@@ -57,8 +42,10 @@ const transientConnectionErrorCodes = new Set([
   "EPIPE",
   "ENOTFOUND",
   "EAI_AGAIN",
-  "PROTOCOL_CONNECTION_LOST",
-  "HANDSHAKE_SSL_ERROR"
+  "28P01", // Invalid password
+  "3D000", // Invalid catalog name
+  "08001", // sqlclient_unable_to_establish_sqlconnection
+  "08006", // connection_failure
 ]);
 
 export function isTransientConnectionError(error) {
@@ -74,10 +61,6 @@ export function serializeDatabaseError(error) {
     name: error.name,
     message: error.message,
     code: error.code,
-    errno: error.errno,
-    sqlState: error.sqlState,
-    sqlMessage: error.sqlMessage,
-    fatal: error.fatal,
     stack: error.stack
   };
 }
@@ -90,15 +73,14 @@ export async function verifyDatabaseConnection() {
   let attempt = 1;
 
   while (attempt <= env.dbConnectRetries) {
-    let connection;
+    let client;
 
     try {
-      connection = await pool.getConnection();
-      await connection.query("SELECT 1");
+      client = await pool.connect();
+      await client.query("SELECT 1");
       console.log("[Database] Connection verified successfully");
       console.log(`Host: ${env.dbHost}`);
       console.log(`Port: ${env.dbPort}`);
-      console.log(`staleRailwayEndpointDetected: ${env.usesStaleRailwayEndpoint}`);
       return;
     } catch (error) {
       console.error(`[Database] SELECT 1 failed on attempt ${attempt}/${env.dbConnectRetries}:`, serializeDatabaseError(error));
@@ -114,8 +96,8 @@ export async function verifyDatabaseConnection() {
       await wait(env.dbConnectRetryDelayMs);
       attempt += 1;
     } finally {
-      if (connection) {
-        connection.release();
+      if (client) {
+        client.release();
       }
     }
   }
@@ -128,14 +110,6 @@ export function getDatabaseDebugSummary() {
     connectTimeoutMs: env.dbConnectTimeoutMs,
     connectRetries: env.dbConnectRetries,
     connectRetryDelayMs: env.dbConnectRetryDelayMs,
-    MYSQL_PUBLIC_URL_detected: env.mysqlPublicUrlDetected,
-    MYSQL_PUBLIC_URL_parsed: env.mysqlPublicUrlParsed,
-    MYSQL_PUBLIC_URL_host: env.mysqlPublicUrlHost || null,
-    MYSQL_PUBLIC_URL_port: env.mysqlPublicUrlPort,
-    expectedRailwayPublicHost: "metro.proxy.rlwy.net",
-    expectedRailwayPublicPort: 22437,
-    usingExpectedRailwayPublicHost: env.isExpectedRailwayPublicHost,
-    usingExpectedRailwayPublicPort: env.isExpectedRailwayPublicPort,
-    staleRailwayEndpointDetected: env.usesStaleRailwayEndpoint
+    databaseUrlDetected: env.databaseUrlDetected,
   };
 }

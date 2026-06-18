@@ -1,6 +1,6 @@
 -- Add service_category column and migrate existing field_work users
 ALTER TABLE users
-  ADD COLUMN IF NOT EXISTS service_category VARCHAR(255) NULL AFTER work_type;
+  ADD COLUMN IF NOT EXISTS service_category VARCHAR(255) NULL ;
 
 -- For users that have work_type set, migrate to service_category if empty
 UPDATE users

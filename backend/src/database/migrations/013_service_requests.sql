@@ -1,13 +1,13 @@
 CREATE TABLE IF NOT EXISTS service_requests (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  customer_id BIGINT UNSIGNED NOT NULL,
-  lead_id BIGINT UNSIGNED NULL,
+  id BIGINT  PRIMARY KEY,
+  customer_id BIGINT NOT NULL,
+  lead_id BIGINT NULL,
   service_category VARCHAR(80) NOT NULL,
   problem_description TEXT NOT NULL,
   expected_solution TEXT NOT NULL,
   requirement_details TEXT NOT NULL,
   budget VARCHAR(120) NULL,
-  urgency ENUM('normal','important','urgent') NOT NULL DEFAULT 'normal',
+  urgency VARCHAR(255) NOT NULL DEFAULT 'normal',
   address TEXT NOT NULL,
   city VARCHAR(120) NOT NULL,
   area_pincode VARCHAR(20) NOT NULL,
@@ -17,15 +17,15 @@ CREATE TABLE IF NOT EXISTS service_requests (
   location_lng DECIMAL(10, 7) NULL,
   dynamic_answers_json JSON NULL,
   attachments_json JSON NULL,
-  status ENUM('submitted','in_review','assigned','in_progress','completed','cancelled') NOT NULL DEFAULT 'submitted',
-  assigned_worker_id BIGINT UNSIGNED NULL,
+  status VARCHAR(255) NOT NULL DEFAULT 'submitted',
+  assigned_worker_id BIGINT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ,
   CONSTRAINT fk_service_requests_customer FOREIGN KEY (customer_id) REFERENCES users (id),
   CONSTRAINT fk_service_requests_lead FOREIGN KEY (lead_id) REFERENCES leads (id) ON DELETE SET NULL,
-  CONSTRAINT fk_service_requests_worker FOREIGN KEY (assigned_worker_id) REFERENCES users (id) ON DELETE SET NULL,
-  INDEX idx_service_requests_customer (customer_id),
-  INDEX idx_service_requests_status (status),
-  INDEX idx_service_requests_urgency (urgency),
-  INDEX idx_service_requests_created (created_at)
-) ENGINE=InnoDB;
+  CONSTRAINT fk_service_requests_worker FOREIGN KEY (assigned_worker_id) REFERENCES users (id) ON DELETE SET NULL
+  -- index removed
+  -- index removed
+  -- index removed
+  -- index removed
+) ;
